@@ -1,0 +1,19 @@
+[gd_scene format=3 uid="uid://djq3s4pb3f758"]
+
+[ext_resource type="Script" uid="uid://bfhml5io0ftqf" path="res://Script/arma.gd" id="1_pci04"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_2rt8k"]
+
+[node name="Arma" type="Node3D" unique_id=1431892919]
+script = ExtResource("1_pci04")
+
+[node name="Cabo" type="MeshInstance3D" parent="." unique_id=2011046220]
+transform = Transform3D(0.4, 0, 0, 0, 0.785, 0, 0, 0, 0.4, 0, 0.65221214, 0)
+mesh = SubResource("BoxMesh_2rt8k")
+
+[node name="Cano" type="MeshInstance3D" parent="." unique_id=1128239765]
+transform = Transform3D(-1.7484556e-08, -2, 0, 0.4, -8.742278e-08, 0, 0, 0, 0.4, -0.8049423, 1.0510689, 0)
+mesh = SubResource("BoxMesh_2rt8k")
+
+[node name="PontaDoCano" type="Marker3D" parent="Cano" unique_id=1276767318]
+transform = Transform3D(-2.1855693e-07, 5, 0, -1.0000001, -4.3711402e-08, 0, 0, 0, 5.0000005, 0.036420584, 0.47186038, 0)

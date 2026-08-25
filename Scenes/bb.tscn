@@ -1,0 +1,60 @@
+[gd_scene format=3 uid="uid://bwyqmg1vcen47"]
+
+[ext_resource type="Script" uid="uid://15ukyup4oko8" path="res://Script/bb.gd" id="1_bpknu"]
+
+[sub_resource type="PhysicsMaterial" id="PhysicsMaterial_3twku"]
+bounce = 0.5
+
+[sub_resource type="SphereMesh" id="SphereMesh_bpknu"]
+radius = 0.06
+height = 0.12
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_puvlh"]
+radius = 0.052295938
+
+[sub_resource type="Curve" id="Curve_bpknu"]
+_data = [Vector2(0, 1), 0.0, 0.0, 0, 0, Vector2(1, 0), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="CurveTexture" id="CurveTexture_puvlh"]
+curve = SubResource("Curve_bpknu")
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_bpknu"]
+gravity = Vector3(0, 0, 0)
+scale_curve = SubResource("CurveTexture_puvlh")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_bpknu"]
+albedo_color = Color(0.99019676, 0.7790303, 0, 1)
+use_particle_trails = true
+
+[sub_resource type="RibbonTrailMesh" id="RibbonTrailMesh_puvlh"]
+material = SubResource("StandardMaterial3D_bpknu")
+size = 0.01
+
+[node name="BB" type="RigidBody3D" unique_id=1632790232]
+mass = 0.001
+physics_material_override = SubResource("PhysicsMaterial_3twku")
+continuous_cd = true
+linear_damp_mode = 1
+script = ExtResource("1_bpknu")
+magnus_coefficient = 3.0
+trail_lifetime = 3.0
+trail_width = 0.2
+trail_color = Color(0.26776323, 0.72924787, 5.7756904e-07, 1)
+trail_fade_sharpness = 1.0
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=354601118]
+mesh = SubResource("SphereMesh_bpknu")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=2057895655]
+shape = SubResource("SphereShape3D_puvlh")
+
+[node name="RastroBala" type="GPUParticles3D" parent="." unique_id=992120795]
+visible = false
+amount = 500
+lifetime = 2.0
+visibility_aabb = AABB(-100, -100, -100, 200, 200, 200)
+trail_enabled = true
+trail_lifetime = 1.0
+process_material = SubResource("ParticleProcessMaterial_bpknu")
+draw_pass_1 = SubResource("RibbonTrailMesh_puvlh")
