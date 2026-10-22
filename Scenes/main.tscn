@@ -11,6 +11,11 @@
 [ext_resource type="Script" uid="uid://ojy3bad6d8ry" path="res://Scripts/fps_camera_look.gd" id="6_344ge"]
 [ext_resource type="PackedScene" uid="uid://u65r5bv7unv7" path="res://Scenes/pistolGlock.tscn" id="9_glock"]
 [ext_resource type="PackedScene" uid="uid://baasnreoqyt3v" path="res://Scenes/pause_screen.tscn" id="11_d1ilt"]
+[ext_resource type="PackedScene" uid="uid://hi278lrvlyb5" path="res://Scenes/magazine_pickup.tscn" id="12_pickup"]
+[ext_resource type="Resource" path="res://Resources/Magazines/pistol_glock_25bb_025g.tres" id="13_glock_025"]
+[ext_resource type="Resource" path="res://Resources/Magazines/pistol_glock_25bb_030g.tres" id="14_glock_030"]
+[ext_resource type="Resource" path="res://Resources/Magazines/rifle_stanag_30bb_025g.tres" id="15_stanag_025"]
+[ext_resource type="Resource" path="res://Resources/Magazines/shotgun_shell_30bb_020g.tres" id="16_shotgun_020"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_8gbba"]
 sky_top_color = Color(0.60895693, 0.34373838, 0.63823307, 1)
@@ -118,3 +123,19 @@ transform = Transform3D(-0.99999094, 0, 0.0042585325, 0, 1, 0, -0.0042585325, 0,
 transform = Transform3D(-0.999822, 0, -0.018865809, 0, 1, 0, 0.018865809, 0, -0.999822, -31.660936, 3, -42.893047)
 
 [node name="PauseScreen" parent="." unique_id=842650682 instance=ExtResource("11_d1ilt")]
+
+[node name="Pickup_Glock_025g" parent="." unique_id=191975251 instance=ExtResource("12_pickup")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.5, 0.6, 2.6)
+magazine = ExtResource("13_glock_025")
+
+[node name="Pickup_Glock_030g" parent="." unique_id=1440274697 instance=ExtResource("12_pickup")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 11.5, 0.6, 2.6)
+magazine = ExtResource("14_glock_030")
+
+[node name="Pickup_STANAG_Incompatible" parent="." unique_id=1586242246 instance=ExtResource("12_pickup")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.5, 0.6, 5.6)
+magazine = ExtResource("15_stanag_025")
+
+[node name="Pickup_Shotgun_Incompatible" parent="." unique_id=1973508311 instance=ExtResource("12_pickup")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.5, 0.6, -0.4)
+magazine = ExtResource("16_shotgun_020")

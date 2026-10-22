@@ -183,21 +183,32 @@ func adjust_hop_up(delta_value: float) -> void:
 	print("Hop-up adjusted to: ", spin_rad_s, " rad/s")
 
 
-func equip_magazine(new_magazine: Magazine) -> bool:
+func trigger_incompatible_magazine() -> void:
+	print("Incompatible magazine! Expected: ", Magazine.get_type_name_for(compatible_magazine_type))
+	incompatible_magazine.emit()
+	carregador_incompativel.emit()
+
+
+func swap_magazine(new_magazine: Magazine) -> Magazine:
 	if new_magazine == null:
-		return false
+		return null
 	if new_magazine.type != compatible_magazine_type:
 		print("Incompatible magazine! Expected: ", Magazine.get_type_name_for(compatible_magazine_type), " but received: ", new_magazine.get_type_name())
 		incompatible_magazine.emit()
 		carregador_incompativel.emit()
-		return false
+		return null
 	
+	var old_mag := equipped_magazine
 	equipped_magazine = new_magazine
 	magazine_equipped.emit(equipped_magazine)
 	ammo_changed.emit(equipped_magazine.current_ammo, equipped_magazine.capacity)
 	municao_alterada.emit(equipped_magazine.current_ammo, equipped_magazine.capacity)
-	print("Equipped magazine: ", equipped_magazine.get_type_name(), " [", equipped_magazine.current_ammo, "/", equipped_magazine.capacity, "] - BB: ", equipped_magazine.get_bb_mass_grams(), "g")
-	return true
+	print("Swapped magazine: ", equipped_magazine.get_type_name(), " [", equipped_magazine.current_ammo, "/", equipped_magazine.capacity, "] - BB: ", equipped_magazine.get_bb_mass_grams(), "g")
+	return old_mag
+
+
+func equip_magazine(new_magazine: Magazine) -> bool:
+	return swap_magazine(new_magazine) != null
 
 
 func trigger_dry_fire() -> void:

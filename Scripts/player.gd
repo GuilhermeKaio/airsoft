@@ -10,6 +10,13 @@ extends CharacterBody3D
 @export var gravity: float = 9.8
 
 @onready var main_camera: Camera3D = $Camera3
+@onready var weapon: Node = get_node_or_null("Weapon")
+
+
+func get_weapon() -> Node:
+	if weapon == null:
+		weapon = get_node_or_null("Weapon")
+	return weapon
 
 
 func _physics_process(delta: float) -> void:

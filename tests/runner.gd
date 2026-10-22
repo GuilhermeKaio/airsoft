@@ -76,6 +76,28 @@ func _initialize() -> void:
 			print("  [PASSED] %s" % m)
 			passed += 1
 
+	# 4. Magazine Pickup & Scenario Swap tests (Requirement 5)
+	var pickup_test = load("res://tests/test_magazine_pickup.gd").new()
+	var pickup_methods = [
+		"test_pickup_initialization",
+		"test_compatible_pickup_and_swap",
+		"test_subsequent_shot_uses_new_bb_mass",
+		"test_incompatible_magazine_rejected",
+		"test_hud_updates_immediately_on_pickup",
+		"test_drop_previous_magazine_improvement"
+	]
+
+	print("\n[Magazine Pickup & Scenario Swap (Requirement 5)]")
+	for m in pickup_methods:
+		pickup_test._reset()
+		pickup_test.call(m)
+		if pickup_test._failed:
+			print("  [FAILED] %s -> %s" % [m, pickup_test._message])
+			failed += 1
+		else:
+			print("  [PASSED] %s" % m)
+			passed += 1
+
 	print("\n==================================================")
 	print("--- TOTAL: %d passed, %d failed ---" % [passed, failed])
 	print("==================================================")
