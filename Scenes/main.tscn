@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://cctuigjhbnno0"]
 
-[ext_resource type="Script" uid="uid://cgvvffhx83o54" path="res://Script/main.gd" id="1_8gbba"]
-[ext_resource type="PackedScene" uid="uid://djq3s4pb3f758" path="res://Scenes/Arma.tscn" id="1_bo1nx"]
+[ext_resource type="Script" uid="uid://cgvvffhx83o54" path="res://Scripts/main.gd" id="1_8gbba"]
+[ext_resource type="PackedScene" uid="uid://djq3s4pb3f758" path="res://Scenes/Weapon.tscn" id="1_bo1nx"]
 [ext_resource type="PackedScene" uid="uid://bwyqmg1vcen47" path="res://Scenes/bb.tscn" id="2_8gbba"]
 [ext_resource type="Texture2D" uid="uid://dwo5q8xnleopl" path="res://Scenes/texture_08.png" id="4_jjvhh"]
 [ext_resource type="Script" uid="uid://b3tqb57f3bwjs" path="res://Scripts/player.gd" id="5_6bp64"]
@@ -91,7 +91,7 @@ script = ExtResource("5_hptm8")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.53181, 0, 2.6763916)
 script = ExtResource("5_6bp64")
 
-[node name="Arma" parent="Player" unique_id=1431892919 instance=ExtResource("1_bo1nx")]
+[node name="Weapon" parent="Player" unique_id=1431892919 instance=ExtResource("1_bo1nx")]
 transform = Transform3D(0.98352706, 0.049164772, 0.17394692, -0.04819619, 0.99878985, -0.009790445, -0.17421776, 0.0012455867, 0.98470634, -2.0503893, 2.3481517, -1.0320365)
 bb_scene = ExtResource("2_8gbba")
 weapon_prefab = ExtResource("9_glock")
