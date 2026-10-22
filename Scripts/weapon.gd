@@ -126,7 +126,9 @@ func _process(delta: float) -> void:
 
 	# Full-auto firing logic
 	if fire_mode == FireMode.AUTO and _trigger_held and _fire_cooldown <= 0.0:
-		if equipped_magazine != null and not equipped_magazine.is_empty():
+		if not Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
+			_trigger_held = false
+		elif equipped_magazine != null and not equipped_magazine.is_empty():
 			fire()
 			_fire_cooldown = 60.0 / rpm
 		else:
@@ -134,7 +136,7 @@ func _process(delta: float) -> void:
 			_start_reload()
 
 
-func _input(event: InputEvent) -> void:
+func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		_trigger_held = event.pressed
 		
@@ -155,11 +157,15 @@ func _input(event: InputEvent) -> void:
 		if equipped_magazine != null and not equipped_magazine.is_full():
 			_start_reload()
 
-	# Hop-up adjustments via wheel up / down
+	# Hop-up adjustments via wheel up / down (unhandled input ensures no conflict with UI/menus)
 	if event.is_action_pressed("hopup_increase"):
 		adjust_hop_up(hop_up_step)
+		if is_inside_tree() and get_viewport():
+			get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("hopup_decrease"):
 		adjust_hop_up(-hop_up_step)
+		if is_inside_tree() and get_viewport():
+			get_viewport().set_input_as_handled()
 
 
 func toggle_fire_mode() -> void:

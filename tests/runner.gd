@@ -40,7 +40,8 @@ func _initialize() -> void:
 		"test_weapon_initialization",
 		"test_weapon_magazine_compatibility",
 		"test_weapon_firing_and_dry_fire",
-		"test_hop_up_and_fire_mode"
+		"test_hop_up_and_fire_mode",
+		"test_hop_up_unhandled_input_mouse_wheel"
 	]
 
 	print("\n[Weapon & Integration]")

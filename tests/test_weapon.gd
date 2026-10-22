@@ -120,3 +120,54 @@ func test_hop_up_and_fire_mode() -> void:
 	weapon.toggle_fire_mode()
 	assert_eq(weapon.fire_mode, WeaponClass.FireMode.SEMI)
 	weapon.free()
+
+
+func test_hop_up_unhandled_input_mouse_wheel() -> void:
+	var weapon = WeaponClass.new()
+	weapon.min_hop_up = 0.0
+	weapon.max_hop_up = 2500.0
+	weapon.spin_rad_s = 1200.0
+	weapon.hop_up_step = 50.0
+
+	var signal_values: Array[float] = []
+	weapon.hop_up_adjusted.connect(func(v: float): signal_values.append(v))
+
+	# 1. Wheel up event (hopup_increase)
+	var ev_up = InputEventMouseButton.new()
+	ev_up.button_index = MOUSE_BUTTON_WHEEL_UP
+	ev_up.pressed = true
+	weapon._unhandled_input(ev_up)
+
+	assert_eq(weapon.spin_rad_s, 1250.0, "Wheel Up in _unhandled_input should increase hop-up by step")
+	assert_eq(signal_values.size(), 1, "Should emit hop_up_adjusted signal")
+	assert_eq(signal_values[0], 1250.0)
+
+	# 2. Wheel up release event (pressed = false) should NOT change hop-up
+	var ev_up_release = InputEventMouseButton.new()
+	ev_up_release.button_index = MOUSE_BUTTON_WHEEL_UP
+	ev_up_release.pressed = false
+	weapon._unhandled_input(ev_up_release)
+	assert_eq(weapon.spin_rad_s, 1250.0, "Wheel release should not change hop-up")
+	assert_eq(signal_values.size(), 1)
+
+	# 3. Wheel down event (hopup_decrease)
+	var ev_down = InputEventMouseButton.new()
+	ev_down.button_index = MOUSE_BUTTON_WHEEL_DOWN
+	ev_down.pressed = true
+	weapon._unhandled_input(ev_down)
+
+	assert_eq(weapon.spin_rad_s, 1200.0, "Wheel Down in _unhandled_input should decrease hop-up by step")
+	assert_eq(signal_values.size(), 2)
+	assert_eq(signal_values[1], 1200.0)
+
+	# 4. Limit testing: increase to max clamp
+	weapon.spin_rad_s = 2480.0
+	weapon._unhandled_input(ev_up)
+	assert_eq(weapon.spin_rad_s, 2500.0, "Should clamp to max_hop_up via _unhandled_input")
+
+	# 5. Limit testing: decrease to min clamp
+	weapon.spin_rad_s = 20.0
+	weapon._unhandled_input(ev_down)
+	assert_eq(weapon.spin_rad_s, 0.0, "Should clamp to min_hop_up via _unhandled_input")
+
+	weapon.free()
