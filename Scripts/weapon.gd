@@ -5,19 +5,27 @@ extends Node3D
 ## Handles magazine compatibility, dynamic BB physics calculation,
 ## rate of fire, firing modes, reload animation, and state signals.
 
-const MagazineClass = preload("res://Scripts/magazine.gd")
-const MagazineLoaderClass = preload("res://Scripts/magazine_loader.gd")
+const Magazine = preload("res://Scripts/magazine.gd")
+const MagazineLoader = preload("res://Scripts/magazine_loader.gd")
 
 enum FireMode { SEMI, AUTO }
 
 ## Signals
 signal ammo_changed(current: int, max_capacity: int)
+signal municao_alterada(current: int, max_capacity: int)
 signal fire_mode_changed(new_mode: String)
+signal modo_tiro_alterado(new_mode: String)
 signal reload_started(duration: float)
+signal recarga_iniciada(duration: float)
 signal reload_completed()
+signal recarga_concluida()
 signal hop_up_adjusted(new_value: float)
+signal hop_up_ajustado(new_value: float)
 signal dry_fired()
+signal disparo_seco()
 signal incompatible_magazine()
+signal carregador_incompativel()
+signal magazine_equipped(magazine: Magazine)
 
 @export_group("Prefabs")
 @export var bb_scene: PackedScene
@@ -79,7 +87,7 @@ func _ready() -> void:
 	
 	# Fallback/default magazine initialization if none assigned in the inspector
 	if equipped_magazine == null:
-		equipped_magazine = MagazineLoaderClass.create_magazine(compatible_magazine_type, 25, 25, 0.20)
+		equipped_magazine = MagazineLoader.create_magazine(compatible_magazine_type, 25, 25, 0.20)
 	
 	_emit_initial_state()
 
@@ -159,11 +167,13 @@ func toggle_fire_mode() -> void:
 	var mode_name := "AUTO" if fire_mode == FireMode.AUTO else "SEMI"
 	print("Fire mode: ", mode_name)
 	fire_mode_changed.emit(mode_name)
+	modo_tiro_alterado.emit(mode_name)
 
 
 func adjust_hop_up(delta_value: float) -> void:
 	spin_rad_s = clampf(spin_rad_s + delta_value, min_hop_up, max_hop_up)
 	hop_up_adjusted.emit(spin_rad_s)
+	hop_up_ajustado.emit(spin_rad_s)
 	print("Hop-up adjusted to: ", spin_rad_s, " rad/s")
 
 
@@ -173,10 +183,13 @@ func equip_magazine(new_magazine: Magazine) -> bool:
 	if new_magazine.type != compatible_magazine_type:
 		print("Incompatible magazine! Expected: ", Magazine.get_type_name_for(compatible_magazine_type), " but received: ", new_magazine.get_type_name())
 		incompatible_magazine.emit()
+		carregador_incompativel.emit()
 		return false
 	
 	equipped_magazine = new_magazine
+	magazine_equipped.emit(equipped_magazine)
 	ammo_changed.emit(equipped_magazine.current_ammo, equipped_magazine.capacity)
+	municao_alterada.emit(equipped_magazine.current_ammo, equipped_magazine.capacity)
 	print("Equipped magazine: ", equipped_magazine.get_type_name(), " [", equipped_magazine.current_ammo, "/", equipped_magazine.capacity, "] - BB: ", equipped_magazine.get_bb_mass_grams(), "g")
 	return true
 
@@ -184,6 +197,7 @@ func equip_magazine(new_magazine: Magazine) -> bool:
 func trigger_dry_fire() -> void:
 	print("Click! Dry-fire (no ammo or missing magazine).")
 	dry_fired.emit()
+	disparo_seco.emit()
 
 
 func _start_reload() -> void:
@@ -192,6 +206,7 @@ func _start_reload() -> void:
 	is_reloading = true
 	_reload_timer = reload_time
 	reload_started.emit(reload_time)
+	recarga_iniciada.emit(reload_time)
 	print("Reloading...")
 	
 	if mesh:
@@ -214,7 +229,9 @@ func _finish_reload() -> void:
 	if equipped_magazine:
 		equipped_magazine.refill()
 		ammo_changed.emit(equipped_magazine.current_ammo, equipped_magazine.capacity)
+		municao_alterada.emit(equipped_magazine.current_ammo, equipped_magazine.capacity)
 	reload_completed.emit()
+	recarga_concluida.emit()
 	print("Reload complete!")
 
 
@@ -234,6 +251,7 @@ func fire() -> void:
 		return
 	
 	ammo_changed.emit(equipped_magazine.current_ammo, equipped_magazine.capacity)
+	municao_alterada.emit(equipped_magazine.current_ammo, equipped_magazine.capacity)
 
 	# Calculate dynamic velocity using equipped magazine's BB mass: v = sqrt(2E / m)
 	var bb_mass_kg: float = equipped_magazine.bb_mass_kg
@@ -271,7 +289,11 @@ func fire() -> void:
 
 func _emit_initial_state() -> void:
 	if equipped_magazine:
+		magazine_equipped.emit(equipped_magazine)
 		ammo_changed.emit(equipped_magazine.current_ammo, equipped_magazine.capacity)
+		municao_alterada.emit(equipped_magazine.current_ammo, equipped_magazine.capacity)
 	var mode_name := "AUTO" if fire_mode == FireMode.AUTO else "SEMI"
 	fire_mode_changed.emit(mode_name)
+	modo_tiro_alterado.emit(mode_name)
 	hop_up_adjusted.emit(spin_rad_s)
+	hop_up_ajustado.emit(spin_rad_s)

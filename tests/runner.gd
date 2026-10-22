@@ -1,5 +1,8 @@
 extends SceneTree
 
+func _init() -> void:
+	_initialize()
+
 func _initialize() -> void:
 	print("==================================================")
 	print("--- EXECUTING SIMULATOR UNIT TESTS ---")
@@ -46,6 +49,27 @@ func _initialize() -> void:
 		weapon_test.call(m)
 		if weapon_test._failed:
 			print("  [FAILED] %s -> %s" % [m, weapon_test._message])
+			failed += 1
+		else:
+			print("  [PASSED] %s" % m)
+			passed += 1
+
+	# 3. Ammo HUD tests
+	var hud_test = load("res://tests/test_ammo_hud.gd").new()
+	var hud_methods = [
+		"test_hud_initialization_with_weapon",
+		"test_reactive_signals_update",
+		"test_no_polling_in_process",
+		"test_reactive_magazine_change",
+		"test_temporary_notifications"
+	]
+
+	print("\n[Ammo HUD (Reactive Signals)]")
+	for m in hud_methods:
+		hud_test._reset()
+		hud_test.call(m)
+		if hud_test._failed:
+			print("  [FAILED] %s -> %s" % [m, hud_test._message])
 			failed += 1
 		else:
 			print("  [PASSED] %s" % m)
