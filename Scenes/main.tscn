@@ -4,6 +4,13 @@
 [ext_resource type="PackedScene" uid="uid://djq3s4pb3f758" path="res://Scenes/Arma.tscn" id="1_bo1nx"]
 [ext_resource type="PackedScene" uid="uid://bwyqmg1vcen47" path="res://Scenes/bb.tscn" id="2_8gbba"]
 [ext_resource type="Texture2D" uid="uid://dwo5q8xnleopl" path="res://Scenes/texture_08.png" id="4_jjvhh"]
+[ext_resource type="Script" uid="uid://b3tqb57f3bwjs" path="res://Scripts/player.gd" id="5_6bp64"]
+[ext_resource type="Script" uid="uid://m2dlr4iyng1o" path="res://Scripts/ammo_hud.gd" id="5_hptm8"]
+[ext_resource type="PackedScene" uid="uid://bvhrgbrtk3lvj" path="res://Scenes/enemy.tscn" id="5_kry3j"]
+[ext_resource type="Script" uid="uid://clg12ifh6wrd4" path="res://Scripts/crosshair.gd" id="6_21xkr"]
+[ext_resource type="Script" uid="uid://ojy3bad6d8ry" path="res://Scripts/fps_camera_look.gd" id="6_344ge"]
+[ext_resource type="PackedScene" uid="uid://u65r5bv7unv7" path="res://Scenes/pistolGlock.tscn" id="9_glock"]
+[ext_resource type="PackedScene" uid="uid://baasnreoqyt3v" path="res://Scenes/pause_screen.tscn" id="11_d1ilt"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_8gbba"]
 sky_top_color = Color(0.60895693, 0.34373838, 0.63823307, 1)
@@ -23,6 +30,10 @@ tonemap_mode = 2
 albedo_texture = ExtResource("4_jjvhh")
 uv1_triplanar = true
 
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_344ge"]
+radius = 0.4
+height = 1.8
+
 [node name="Main" type="Node3D" unique_id=390250828]
 script = ExtResource("1_8gbba")
 
@@ -32,11 +43,6 @@ environment = SubResource("Environment_kry3j")
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=552969381]
 transform = Transform3D(-0.8660254, -0.43301278, 0.25, 0, 0.49999997, 0.86602545, -0.50000006, 0.75, -0.43301266, 0, 0, -1.8278122)
 shadow_enabled = true
-
-[node name="Arma" parent="." unique_id=1431892919 instance=ExtResource("1_bo1nx")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7.0676665, 2.2082226, 1.8982759)
-bb_scene = ExtResource("2_8gbba")
-spin_rad_s = 1400.0
 
 [node name="CSGCombiner3D" type="CSGCombiner3D" parent="." unique_id=1029443765]
 material_override = SubResource("StandardMaterial3D_jjvhh")
@@ -61,17 +67,54 @@ transform = Transform3D(0.913978, -0.4057638, 0, 0.4057638, 0.913978, 0, 0, 0, 1
 visible = false
 size = Vector3(1, 7, 10)
 
-[node name="Camera1" type="Camera3D" parent="." unique_id=1340499436]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18.403261, 3, 26.620712)
+[node name="Enemy" parent="." unique_id=125874339 instance=ExtResource("5_kry3j")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -40.074677, 3.6443892, 7.1113405)
 
-[node name="Camera2" type="Camera3D" parent="." unique_id=1782218225]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.759387, 3, 18.86868)
+[node name="HUD" type="CanvasLayer" parent="." unique_id=1651058074]
 
-[node name="Camera3" type="Camera3D" parent="." unique_id=259721067]
-transform = Transform3D(-0.076475434, 0, 0.9970715, 0, 1, 0, -0.9970715, 0, -0.076475434, 8.53181, 4.311756, 2.6763916)
+[node name="Crosshair" type="Control" parent="HUD" unique_id=1811383665]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("6_21xkr")
+espessura = 4.0
+cor = Color(5.1018596e-06, 0.91858923, 0.35969555, 0.9019608)
 
-[node name="Camera4" type="Camera3D" parent="." unique_id=1317253131]
-transform = Transform3D(-0.99999094, 0, 0.0042585325, 0, 1, 0, -0.0042585325, 0, -0.99999094, -0.759387, 3, -17.832035)
+[node name="AmmoHUD" type="Label" parent="HUD" unique_id=1430001124]
+script = ExtResource("5_hptm8")
 
-[node name="Camera5" type="Camera3D" parent="." unique_id=1547395053]
-transform = Transform3D(-0.999822, 0, -0.018865809, 0, 1, 0, 0.018865809, 0, -0.999822, -23.129128, 3, -40.216656)
+[node name="Player" type="CharacterBody3D" parent="." unique_id=296718553]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.53181, 0, 2.6763916)
+script = ExtResource("5_6bp64")
+
+[node name="Arma" parent="Player" unique_id=1431892919 instance=ExtResource("1_bo1nx")]
+transform = Transform3D(0.98352706, 0.049164772, 0.17394692, -0.04819619, 0.99878985, -0.009790445, -0.17421776, 0.0012455867, 0.98470634, -2.0503893, 2.3481517, -1.0320365)
+bb_scene = ExtResource("2_8gbba")
+weapon_prefab = ExtResource("9_glock")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Player" unique_id=36120277]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+shape = SubResource("CapsuleShape3D_344ge")
+
+[node name="Camera1" type="Camera3D" parent="Player" unique_id=1340499436]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -26.935072, 3, 23.94432)
+
+[node name="Camera2" type="Camera3D" parent="Player" unique_id=1782218225]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -9.291197, 3, 16.192287)
+
+[node name="Camera3" type="Camera3D" parent="Player" unique_id=259721067]
+transform = Transform3D(-0.076475434, 0, 0.9970715, 0, 1, 0, -0.9970715, 0, -0.076475434, 0, 4.311756, 0)
+current = true
+script = ExtResource("6_344ge")
+
+[node name="Camera4" type="Camera3D" parent="Player" unique_id=1317253131]
+transform = Transform3D(-0.99999094, 0, 0.0042585325, 0, 1, 0, -0.0042585325, 0, -0.99999094, -9.291197, 3, -20.508427)
+
+[node name="Camera5" type="Camera3D" parent="Player" unique_id=1547395053]
+transform = Transform3D(-0.999822, 0, -0.018865809, 0, 1, 0, 0.018865809, 0, -0.999822, -31.660936, 3, -42.893047)
+
+[node name="PauseScreen" parent="." unique_id=842650682 instance=ExtResource("11_d1ilt")]

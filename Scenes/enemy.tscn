@@ -1,0 +1,20 @@
+[gd_scene format=3 uid="uid://bvhrgbrtk3lvj"]
+
+[ext_resource type="Script" uid="uid://c7mn71ayhfr8t" path="res://Scripts/enemy_no_sideways.gd" id="1_hghv2"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_ne65n"]
+radius = 3.0
+height = 6.0
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_hghv2"]
+radius = 3.0
+height = 6.0
+
+[node name="RigidBody3D" type="RigidBody3D" unique_id=1532128056]
+script = ExtResource("1_hghv2")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=1746717900]
+shape = SubResource("CapsuleShape3D_ne65n")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=1927645518]
+mesh = SubResource("CapsuleMesh_hghv2")

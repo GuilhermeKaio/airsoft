@@ -55,7 +55,7 @@ func _stop_trail_recording() -> void:
 	_trail_recording = false
 
 
-func _physics_process(delta: float) -> void:
+func _physics_process(_delta: float) -> void:
 	var current_velocity = linear_velocity
 	var speed = current_velocity.length()
 

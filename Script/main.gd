@@ -1,13 +1,13 @@
 extends Node3D
-@onready var cam1 = $Camera1
-@onready var cam2 = $Camera2
-@onready var cam3 = $Camera3
-@onready var cam4 = $Camera4
-@onready var cam5 = $Camera5
+@onready var cam1 = $Player/Camera1
+@onready var cam2 = $Player/Camera2
+@onready var cam3 = $Player/Camera3
+@onready var cam4 = $Player/Camera4
+@onready var cam5 = $Player/Camera5
 
 func _ready() -> void:
-	if cam1:
-		cam1.make_current()
+	if cam3:
+		cam3.make_current()
 
 func _input(event: InputEvent) -> void:if event is InputEventKey and event.pressed and not event.echo:
 		if event.ctrl_pressed:match event.keycode:

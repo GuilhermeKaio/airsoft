@@ -1,0 +1,43 @@
+[gd_scene format=3 uid="uid://baasnreoqyt3v"]
+
+[ext_resource type="Script" uid="uid://dw8ycxytcbc0t" path="res://Scripts/pause_screen.gd" id="1_xub4q"]
+
+[node name="PauseScreen" type="CanvasLayer" unique_id=842650682]
+process_mode = 3
+layer = 10
+script = ExtResource("1_xub4q")
+
+[node name="PauseOverlay" type="Control" parent="." unique_id=468624050]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Background" type="ColorRect" parent="PauseOverlay" unique_id=1622422406]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0, 0.7)
+
+[node name="CenterContainer" type="CenterContainer" parent="PauseOverlay" unique_id=1404577873]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="PauseOverlay/CenterContainer" unique_id=1923571428]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="TitleLabel" type="Label" parent="PauseOverlay/CenterContainer/VBoxContainer" unique_id=2089395743]
+layout_mode = 2
+theme_override_font_sizes/font_size = 48
+text = "PAUSADO"
+horizontal_alignment = 1
+
+[node name="InstructionLabel" type="Label" parent="PauseOverlay/CenterContainer/VBoxContainer" unique_id=176885139]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.8, 0.8, 0.8, 0.8)
+theme_override_font_sizes/font_size = 18
+text = "Pressione ESC para voltar ao jogo"
+horizontal_alignment = 1
