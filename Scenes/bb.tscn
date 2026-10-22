@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://bwyqmg1vcen47"]
 
-[ext_resource type="Script" uid="uid://15ukyup4oko8" path="res://Script/bb.gd" id="1_bpknu"]
+[ext_resource type="Script" uid="uid://15ukyup4oko8" path="res://Scripts/bb.gd" id="1_bpknu"]
 
 [sub_resource type="PhysicsMaterial" id="PhysicsMaterial_3twku"]
 bounce = 0.5
@@ -49,7 +49,7 @@ mesh = SubResource("SphereMesh_bpknu")
 [node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=2057895655]
 shape = SubResource("SphereShape3D_puvlh")
 
-[node name="RastroBala" type="GPUParticles3D" parent="." unique_id=992120795]
+[node name="BulletTrail" type="GPUParticles3D" parent="." unique_id=992120795]
 visible = false
 amount = 500
 lifetime = 2.0

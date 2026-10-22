@@ -1,15 +1,15 @@
 extends Label
 
-## HUD de munição. Só aparece quando a Camera3 é a câmera ativa do viewport,
-## igual ao comportamento da mira (crosshair.gd).
+## Ammo HUD display. Only visible when Camera3 is the active viewport camera,
+## following the same pattern as crosshair.gd.
 
 @onready var camera3: Camera3D = get_node("../../Player/Camera3")
-@onready var arma = get_node("../../Player/Arma")
+@onready var weapon: Node3D = get_node_or_null("../../Player/Weapon")
 
 
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	offset_left = -240.0
+	offset_left = -300.0
 	offset_top = -70.0
 	offset_right = -24.0
 	offset_bottom = -24.0
@@ -25,5 +25,10 @@ func _ready() -> void:
 
 func _process(_delta: float) -> void:
 	visible = get_viewport().get_camera_3d() == camera3
+	if not visible or weapon == null:
+		return
 
-	text = "%d / %d" % [arma.current_ammo, arma.magazine_capacity]
+	if "bb_mass_grams" in weapon and weapon.bb_mass_grams > 0.0:
+		text = "%d / %d  (%.2fg)" % [weapon.current_ammo, weapon.magazine_capacity, weapon.bb_mass_grams]
+	else:
+		text = "%d / %d" % [weapon.current_ammo, weapon.magazine_capacity]

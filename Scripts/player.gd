@@ -1,8 +1,8 @@
 extends CharacterBody3D
 
-## Sistema de movimentação do Player
-## Todas as câmeras (Camera1-5) são filhas deste node e se movem junto com ele.
-## A Camera3 é a câmera principal (current = true) e define a direção "para frente".
+## Player movement controller.
+## All cameras (Camera1-5) are children of this node and move with it.
+## Camera3 is the primary camera (current = true) and defines the forward direction.
 
 @export var speed: float = 5.0
 @export var sprint_speed: float = 8.5
@@ -13,21 +13,21 @@ extends CharacterBody3D
 
 
 func _physics_process(delta: float) -> void:
-	# Aplica gravidade quando o player não está no chão
+	# Apply gravity when in the air
 	if not is_on_floor():
 		velocity.y -= gravity * delta
 
-	# Pulo
+	# Jump
 	if Input.is_action_just_pressed("jump") and is_on_floor():
 		velocity.y = jump_velocity
 
-	# Lê o input de movimento (WASD)
+	# Read directional movement input (WASD)
 	var input_dir := Vector2(
 		Input.get_action_strength("move_right") - Input.get_action_strength("move_left"),
 		Input.get_action_strength("move_back") - Input.get_action_strength("move_forward")
 	)
 
-	# Usa a orientação horizontal da câmera principal (Camera3) como referência de "frente"
+	# Use main camera horizontal orientation as forward reference
 	var cam_basis := main_camera.global_transform.basis
 	var forward := -cam_basis.z
 	forward.y = 0.0

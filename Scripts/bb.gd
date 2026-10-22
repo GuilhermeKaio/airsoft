@@ -4,7 +4,8 @@ const DRAG_COEFFICIENT = 0.47
 const RADIUS = 0.003
 const CROSS_SECTIONAL_AREA = PI * (RADIUS * RADIUS)
 
-const GROUP_PROJETIL := "bb_projetil"
+const GROUP_PROJECTILE := "bb_projectile"
+const GROUP_PROJETIL := GROUP_PROJECTILE
 var hit_ground: bool = false
 var _trail_recording: bool = true
 
@@ -30,7 +31,8 @@ func _ready() -> void:
 	angular_damp_mode = RigidBody3D.DAMP_MODE_REPLACE
 	angular_damp = 0.0
 
-	add_to_group(GROUP_PROJETIL)
+	add_to_group(GROUP_PROJECTILE)
+	add_to_group("bb_projetil")
 	contact_monitor = true
 	max_contacts_reported = 4
 	body_entered.connect(_on_body_entered)
@@ -43,7 +45,7 @@ func _on_body_entered(body: Node) -> void:
 	if hit_ground:
 		return
 
-	if body.is_in_group(GROUP_PROJETIL):
+	if body.is_in_group(GROUP_PROJECTILE) or body.is_in_group("bb_projetil"):
 		if "hit_ground" in body and body.hit_ground:
 			_stop_trail_recording()
 	else:

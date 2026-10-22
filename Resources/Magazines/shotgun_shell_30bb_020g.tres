@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="Magazine" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://Scripts/magazine.gd" id="1_mag"]
+
+[resource]
+script = ExtResource("1_mag")
+type = 0
+capacity = 30
+current_ammo = 30
+bb_mass_kg = 0.0002
