@@ -6,6 +6,8 @@
 size = Vector3(1.8, 1.8, 1.8)
 
 [node name="WeaponPickup" type="Area3D"]
+collision_layer = 32
+collision_mask = 2
 script = ExtResource("1_wppickup")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]

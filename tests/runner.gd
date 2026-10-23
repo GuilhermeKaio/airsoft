@@ -276,7 +276,49 @@ func _initialize() -> void:
 			print("  [PASSED] %s" % m)
 			passed += 1
 
-	# 12. Pause Screen & Double Sensitivity Control (SRS Seção 6.2)
+	# 12. Recoil Spray Pattern System (SRS Adicionais Seção 3)
+	var recoil_test = load("res://tests/test_recoil.gd").new()
+	var recoil_methods = [
+		"test_recoil_weapon_presets_parameters",
+		"test_rifle_spray_pattern_phases",
+		"test_glock_fire_mode_toggle_updates_recoil",
+		"test_recoil_recovery_and_reset_timing",
+		"test_camera_recoil_and_compensation"
+	]
+
+	print("\n[Recoil Spray Pattern (CS / Valorant Style - SRS Adicionais Seção 3)]")
+	for m in recoil_methods:
+		recoil_test._reset()
+		recoil_test.call(m)
+		if recoil_test._failed:
+			print("  [FAILED] %s -> %s" % [m, recoil_test._message])
+			failed += 1
+		else:
+			print("  [PASSED] %s" % m)
+			passed += 1
+
+	# 13. Bullet Collision Isolation & Exceptions (SRS Adicionais Seção 5)
+	var collision_test = load("res://tests/test_collision_isolation.gd").new()
+	var collision_methods = [
+		"test_layer_names_configured_in_project",
+		"test_bb_collision_layer_and_mask_isolation",
+		"test_player_collision_layer_and_mask",
+		"test_pickups_collision_layer_and_mask",
+		"test_runtime_collision_exception_with_player"
+	]
+
+	print("\n[Collision Isolation & Filters (SRS Adicionais Seção 5)]")
+	for m in collision_methods:
+		collision_test._reset()
+		collision_test.call(m)
+		if collision_test._failed:
+			print("  [FAILED] %s -> %s" % [m, collision_test._message])
+			failed += 1
+		else:
+			print("  [PASSED] %s" % m)
+			passed += 1
+
+	# 14. Pause Screen & Double Sensitivity Control (SRS Seção 6.2)
 	var pause_test = load("res://tests/test_pause_screen.gd").new()
 	var pause_methods = [
 		"test_pause_screen_ui_elements",
@@ -297,7 +339,7 @@ func _initialize() -> void:
 			print("  [PASSED] %s" % m)
 			passed += 1
 
-	# 13. Valorant Ballistic Rotation Conversion (SRS Seção 6.1)
+	# 15. Valorant Ballistic Rotation Conversion (SRS Seção 6.1)
 	var val_test = load("res://tests/test_valorant_sensitivity.gd").new()
 	var val_methods = [
 		"test_valorant_scale_constants",

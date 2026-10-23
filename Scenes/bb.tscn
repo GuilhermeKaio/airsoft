@@ -32,6 +32,8 @@ material = SubResource("StandardMaterial3D_bpknu")
 size = 0.01
 
 [node name="BB" type="RigidBody3D" unique_id=1632790232]
+collision_layer = 8
+collision_mask = 17
 mass = 0.001
 physics_material_override = SubResource("PhysicsMaterial_3twku")
 continuous_cd = true

@@ -106,6 +106,15 @@ toggle_bullet_tracing={
 ]
 }
 
+[layer_names]
+
+3d_physics/layer_1="World"
+3d_physics/layer_2="Player"
+3d_physics/layer_3="Weapon"
+3d_physics/layer_4="BB_Projectile"
+3d_physics/layer_5="Targets"
+3d_physics/layer_6="Pickups"
+
 [physics]
 
 3d/physics_engine="Jolt Physics"

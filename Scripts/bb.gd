@@ -7,8 +7,23 @@ const CROSS_SECTIONAL_AREA = PI * (RADIUS * RADIUS)
 const GROUP_PROJECTILE := "bb_projectile"
 const GROUP_PROJETIL := GROUP_PROJECTILE
 
+const LAYER_WORLD: int = 1
+const LAYER_PLAYER: int = 2
+const LAYER_WEAPON: int = 4
+const LAYER_BB_PROJECTILE: int = 8
+const LAYER_TARGETS: int = 16
+const LAYER_PICKUPS: int = 32
+
+const DEFAULT_BB_LAYER: int = LAYER_BB_PROJECTILE
+const DEFAULT_BB_MASK: int = LAYER_WORLD | LAYER_TARGETS
+
 signal despawned()
 signal despawn_triggered()
+
+func has_collision_exception_with(target: Node) -> bool:
+	if target is CollisionObject3D:
+		return get_collision_exceptions().has(target)
+	return false
 
 static var global_trail_enabled: bool = true
 
@@ -104,6 +119,13 @@ var _trail_points: Array = []
 func _ready() -> void:
 	angular_damp_mode = RigidBody3D.DAMP_MODE_REPLACE
 	angular_damp = 0.0
+
+	# Ensure physics layers follow SRS Adicionais Seção 5
+	if collision_layer == 1 and collision_mask == 1:
+		collision_layer = DEFAULT_BB_LAYER
+		collision_mask = DEFAULT_BB_MASK
+	# Mandatory isolation: Prohibit collision mask from monitoring Player (Layer 2) or Weapon (Layer 3)
+	collision_mask = collision_mask & ~(LAYER_PLAYER | LAYER_WEAPON)
 
 	add_to_group(GROUP_PROJECTILE)
 	add_to_group("bb_projetil")
