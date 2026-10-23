@@ -1,9 +1,5 @@
 extends Camera3D
 
-## Look em primeira pessoa (mouse).
-## Só fica ativo quando ESTA câmera é a câmera atual do viewport (get_camera_3d() == self).
-## Se outra câmera virar a ativa, o mouse é liberado e o look para automaticamente.
-
 @export var mouse_sensitivity: float = 0.003
 @export var min_pitch_deg: float = -89.0
 @export var max_pitch_deg: float = 89.0
@@ -23,16 +19,13 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 
 	if event is InputEventMouseMotion:
-		# Yaw (esquerda/direita) e pitch (cima/baixo) direto na câmera.
 		rotate_y(-event.relative.x * mouse_sensitivity)
 
 		var new_pitch: float = rotation.x - event.relative.y * mouse_sensitivity
 		rotation.x = clamp(new_pitch, deg_to_rad(min_pitch_deg), deg_to_rad(max_pitch_deg))
 
 	elif event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
-		# Solta o mouse pra facilitar testes/debug no editor.
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
 	elif event is InputEventMouseButton and event.pressed and Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
-		# Clicar na tela recaptura o mouse.
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED

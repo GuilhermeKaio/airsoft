@@ -1,16 +1,11 @@
 extends Label
 
-## Ammo HUD display. Only visible when Camera3 is the active viewport camera,
-## following the same pattern as crosshair.gd.
-## Architecture: Strictly reactive via Godot signals. Polling in _process is prohibited.
-
 @export var weapon_path: NodePath = ^"../../Player/Weapon"
 @export var camera_path: NodePath = ^"../../Player/Camera3"
 
 @onready var camera3: Camera3D = get_node_or_null(camera_path)
 @onready var weapon: Node = get_node_or_null(weapon_path)
 
-# Cached reactive HUD state
 var current_ammo: int = 0
 var magazine_capacity: int = 0
 var bb_mass_grams: float = 0.0
@@ -99,7 +94,6 @@ func _sync_from_weapon() -> void:
 	_update_display()
 
 
-## Only manages viewport camera visibility. NO polling of weapon state or text formatting here!
 func _process(_delta: float) -> void:
 	if camera3:
 		visible = get_viewport().get_camera_3d() == camera3

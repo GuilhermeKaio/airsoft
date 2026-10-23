@@ -1,16 +1,11 @@
 class_name Weapon
 extends Node3D
 
-## Controller for Airsoft replica weapons.
-## Handles magazine compatibility, dynamic BB physics calculation,
-## rate of fire, firing modes, reload animation, and state signals.
-
 const Magazine = preload("res://Scripts/magazine.gd")
 const MagazineLoader = preload("res://Scripts/magazine_loader.gd")
 
 enum FireMode { SEMI, AUTO }
 
-## Signals
 signal ammo_changed(current: int, max_capacity: int)
 signal municao_alterada(current: int, max_capacity: int)
 signal fire_mode_changed(new_mode: String)
@@ -32,9 +27,7 @@ signal magazine_equipped(magazine: Magazine)
 @export var weapon_prefab: PackedScene
 
 @export_group("Ballistics & Physics")
-## Nominal muzzle energy in Joules
 @export var energy_joules: float = 1.49
-## Backspin rotation applied to the BB in radians per second (hop-up)
 @export var spin_rad_s: float = 1200.0
 @export var min_hop_up: float = 0.0
 @export var max_hop_up: float = 2500.0
@@ -44,13 +37,11 @@ const METERS_TO_FEET: float = 3.28084
 
 @export_group("Firing Mechanics")
 @export var fire_mode: FireMode = FireMode.SEMI
-@export var rpm: float = 700.0 ## Rounds per minute in automatic mode
-@export var reload_time: float = 2.0 ## Seconds to complete a reload cycle
+@export var rpm: float = 700.0
+@export var reload_time: float = 2.0
 
 @export_group("Magazine System")
-## Compatible magazine type for this weapon
 @export var compatible_magazine_type: Magazine.Type = Magazine.Type.MAG_PISTOL_GLOCK
-## Equipped magazine resource
 @export var equipped_magazine: Magazine
 
 var weapon_instance: Node3D
@@ -67,7 +58,6 @@ var _reload_timer: float = 0.0
 var _mesh_initial_position: Vector3
 var _mesh_initial_rotation: Vector3
 
-# Backward compatibility properties for HUD / other scripts
 var current_ammo: int:
 	get:
 		return equipped_magazine.current_ammo if equipped_magazine != null else 0
@@ -85,7 +75,6 @@ func _ready() -> void:
 	if camera3:
 		_local_offset = camera3.global_transform.affine_inverse() * global_transform
 	
-	# Fallback/default magazine initialization if none assigned in the inspector
 	if equipped_magazine == null:
 		equipped_magazine = MagazineLoader.create_magazine(compatible_magazine_type, 25, 25, 0.20)
 	
@@ -95,7 +84,6 @@ func _ready() -> void:
 		weapon_instance = weapon_prefab.instantiate()
 		add_child(weapon_instance)
 		
-		# Look for Mesh and Muzzle / PontaDoCano
 		mesh = weapon_instance.find_child("Mesh", true, false)
 		if not mesh:
 			mesh = weapon_instance
@@ -113,18 +101,15 @@ func _process(delta: float) -> void:
 	if camera3:
 		global_transform = camera3.global_transform * _local_offset
 
-	# Handle reload timer
 	if is_reloading:
 		_reload_timer -= delta
 		if _reload_timer <= 0.0:
 			_finish_reload()
 		return
 
-	# Fire cooldown countdown
 	if _fire_cooldown > 0.0:
 		_fire_cooldown -= delta
 
-	# Full-auto firing logic
 	if fire_mode == FireMode.AUTO and _trigger_held and _fire_cooldown <= 0.0:
 		if not Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
 			_trigger_held = false
@@ -140,7 +125,6 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		_trigger_held = event.pressed
 		
-		# Semi-auto firing logic
 		if event.pressed and fire_mode == FireMode.SEMI and not is_reloading:
 			if equipped_magazine != null and not equipped_magazine.is_empty():
 				if _fire_cooldown <= 0.0:
@@ -157,7 +141,6 @@ func _unhandled_input(event: InputEvent) -> void:
 		if equipped_magazine != null and not equipped_magazine.is_full():
 			_start_reload()
 
-	# Hop-up adjustments via wheel up / down (unhandled input ensures no conflict with UI/menus)
 	if event.is_action_pressed("hopup_increase"):
 		adjust_hop_up(hop_up_step)
 		if is_inside_tree() and get_viewport():
@@ -261,7 +244,6 @@ func fire() -> void:
 		trigger_dry_fire()
 		return
 
-	# Deduct exactly 1 BB (or 3 for shotgun in extended logic)
 	var consumed: bool = equipped_magazine.consume_bbs(1)
 	if not consumed:
 		trigger_dry_fire()
@@ -270,7 +252,7 @@ func fire() -> void:
 	ammo_changed.emit(equipped_magazine.current_ammo, equipped_magazine.capacity)
 	municao_alterada.emit(equipped_magazine.current_ammo, equipped_magazine.capacity)
 
-	# Calculate dynamic velocity using equipped magazine's BB mass: v = sqrt(2E / m)
+	# v = sqrt(2E / m) para cálculo de velocidade com a massa da BB equipada
 	var bb_mass_kg: float = equipped_magazine.bb_mass_kg
 	var velocity_ms: float = sqrt((2.0 * energy_joules) / bb_mass_kg)
 	var velocity_fps: float = velocity_ms * METERS_TO_FEET

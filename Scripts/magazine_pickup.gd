@@ -1,11 +1,6 @@
 class_name MagazinePickup
 extends Area3D
 
-## Interactive collectible magazine in 3D space.
-## Allows picking up or swapping magazines in the scenario.
-## Validates weapon compatibility, equips the new magazine,
-## updates HUD reactively, and optionally drops the previous magazine in place.
-
 const Magazine = preload("res://Scripts/magazine.gd")
 const MagazineLoader = preload("res://Scripts/magazine_loader.gd")
 
@@ -114,27 +109,25 @@ func _apply_mesh_for_type(mag_type: Magazine.Type) -> void:
 			cylinder.bottom_radius = 0.08
 			cylinder.height = 0.30
 			mesh_instance.mesh = cylinder
-			mat.albedo_color = Color(0.9, 0.12, 0.12) # Red shell
+			mat.albedo_color = Color(0.9, 0.12, 0.12)
 		Magazine.Type.MAG_RIFLE_STANAG:
 			var box := BoxMesh.new()
 			box.size = Vector3(0.12, 0.52, 0.22)
 			mesh_instance.mesh = box
-			mat.albedo_color = Color(0.28, 0.32, 0.36) # Dark metallic STANAG
+			mat.albedo_color = Color(0.28, 0.32, 0.36)
 			mat.metallic = 0.6
 		Magazine.Type.MAG_PISTOL_1911:
 			var box := BoxMesh.new()
 			box.size = Vector3(0.08, 0.40, 0.16)
 			mesh_instance.mesh = box
-			mat.albedo_color = Color(0.22, 0.22, 0.24) # Gunmetal
+			mat.albedo_color = Color(0.22, 0.22, 0.24)
 			mat.metallic = 0.5
 		Magazine.Type.MAG_PISTOL_GLOCK, _:
 			var box := BoxMesh.new()
 			box.size = Vector3(0.10, 0.42, 0.18)
 			mesh_instance.mesh = box
-			mat.albedo_color = Color(0.12, 0.12, 0.14) # Polymer black Glock mag
+			mat.albedo_color = Color(0.12, 0.12, 0.14)
 			mat.roughness = 0.6
-
-	mesh_instance.material_override = mat
 
 	mesh_instance.material_override = mat
 
@@ -152,7 +145,6 @@ func _process(delta: float) -> void:
 		if _rejection_timer <= 0.0:
 			update_visuals()
 
-	# Floating and bobbing animation
 	if model_container:
 		_elapsed_time += delta
 		model_container.rotate_y(rotation_speed * delta)
@@ -180,7 +172,6 @@ func _on_body_exited(body: Node3D) -> void:
 	_overlapping_bodies.erase(body)
 
 
-## Attempts to collect or swap this magazine with the given collector's equipped weapon.
 func try_pickup(collector: Node) -> bool:
 	if _cooldown_timer > 0.0:
 		return false
@@ -193,7 +184,6 @@ func try_pickup(collector: Node) -> bool:
 	if "compatible_magazine_type" in weapon:
 		weapon_compat_type = weapon.compatible_magazine_type
 
-	# Validate compatibility
 	if weapon_compat_type != magazine.type:
 		if weapon.has_method("trigger_incompatible_magazine"):
 			weapon.trigger_incompatible_magazine()
@@ -204,7 +194,6 @@ func try_pickup(collector: Node) -> bool:
 		_show_rejection_feedback()
 		return false
 
-	# Compatible: perform swap
 	var previous_mag: Magazine = null
 	if weapon.has_method("swap_magazine"):
 		previous_mag = weapon.swap_magazine(magazine)
@@ -215,7 +204,6 @@ func try_pickup(collector: Node) -> bool:
 
 	magazine_picked_up.emit(collector, magazine, previous_mag)
 
-	# Improvement: Drop previous magazine at this location preserving remaining ammo
 	if drop_previous_on_swap and previous_mag != null:
 		_spawn_dropped_pickup(previous_mag)
 
@@ -238,7 +226,8 @@ func _spawn_dropped_pickup(dropped_mag: Magazine) -> Node:
 	if instance != null:
 		instance.set("magazine", dropped_mag)
 		instance.set("drop_previous_on_swap", drop_previous_on_swap)
-		instance.set("pickup_cooldown", 1.0) # 1 second cooldown prevents instant re-collection
+		# Cooldown para evitar re-coleta imediata pelo jogador após o descarte
+		instance.set("pickup_cooldown", 1.0)
 		
 		var spawn_parent: Node = get_parent()
 		if spawn_parent == null and is_inside_tree():
@@ -277,7 +266,6 @@ func _find_weapon(node: Node) -> Node:
 	return null
 
 
-## Setup magazine programmatically
 func setup_magazine(p_type: Magazine.Type, p_capacity: int, p_ammo: int, p_mass_kg: float) -> void:
 	magazine = Magazine.new(p_type, p_capacity, p_ammo, p_mass_kg)
 	update_visuals()
