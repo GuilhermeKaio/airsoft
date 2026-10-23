@@ -63,9 +63,20 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 182.79004, -0.4957536, 9.0620
 size = Vector3(2135.9707, 1, 878.158)
 
 [node name="Parede" type="CSGBox3D" parent="CSGCombiner3D" unique_id=1902478398]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 3, 0.5)
-visible = false
-size = Vector3(1, 7, 10)
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, -51.863976, 3, -11.341583)
+size = Vector3(1, 7, 61.100037)
+
+[node name="Parede5" type="CSGBox3D" parent="CSGCombiner3D" unique_id=1101561742]
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, -51.863976, 3, 23.51159)
+size = Vector3(1, 7, 61.100037)
+
+[node name="Parede4" type="CSGBox3D" parent="CSGCombiner3D" unique_id=2058476133]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -82.757095, 3, 6.460104)
+size = Vector3(1, 7, 35.99875)
+
+[node name="Parede6" type="CSGBox3D" parent="CSGCombiner3D" unique_id=403356672]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -21.816391, -1.7196894, 6.232355)
+size = Vector3(1, 7, 35.202568)
 
 [node name="Parede2" type="CSGBox3D" parent="CSGCombiner3D" unique_id=1486400473]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18.89406, 3, 0.5)
@@ -100,9 +111,6 @@ script = ExtResource("5_hptm8")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.53181, 0, 2.6763916)
 collision_layer = 2
 script = ExtResource("5_6bp64")
-weapon = NodePath("WeaponSlot1")
-weapon_slot_1 = NodePath("WeaponSlot1")
-weapon_slot_2 = NodePath("WeaponSlot2")
 
 [node name="WeaponSlot1" parent="Player" unique_id=1431892919 instance=ExtResource("1_bo1nx")]
 weapon_model = 1
@@ -174,30 +182,31 @@ weapon_model = 2
 
 [node name="ShootingGalleryManager" type="Node" parent="." unique_id=295151676]
 script = ExtResource("19_gallery_mgr")
+session_mode = 0
 
 [node name="Target_Enemy_10m" parent="." unique_id=766205888 instance=ExtResource("21_target")]
-transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -1.5, 0, 2.67)
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -32.30448, 0, 2.67)
 
 [node name="Target_Enemy_20m" parent="." unique_id=2039147745 instance=ExtResource("21_target")]
-transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -11.5, 0, 2.67)
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -42.30448, 0, 2.67)
 
 [node name="Target_Civilian_20m" parent="." unique_id=1658869752 instance=ExtResource("21_target")]
-transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -11.5, 0, 1.2)
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -42.30448, 0, 1.2)
 target_type = 1
 points_value = -200
 
 [node name="Target_Patrol_25m" parent="." unique_id=1410881058 instance=ExtResource("21_target")]
-transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -16.5, 0, 2.67)
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -47.30448, 0, 2.67)
 movement_type = 1
 move_speed = 3.5
 patrol_axis = Vector3(0, 0, 1)
 
 [node name="Target_Popup_30m" parent="." unique_id=1013983749 instance=ExtResource("21_target")]
-transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -21.5, 0, 4)
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -52.30448, 0, 4)
 movement_type = 2
 
 [node name="Target_Civilian_Popup" parent="." unique_id=1705129992 instance=ExtResource("21_target")]
-transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -21.5, 0, 1)
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -52.30448, 0, 1)
 target_type = 1
 movement_type = 2
 points_value = -200
@@ -205,4 +214,4 @@ popup_duration = 3.5
 popup_hide_time = 2.5
 
 [node name="Target_Enemy_50m" parent="." unique_id=24175582 instance=ExtResource("21_target")]
-transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -41.5, 0, 2.67)
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -72.30448, 0, 2.67)

@@ -38,8 +38,8 @@ enum EstadoCinematico {
 	NO_AR = 3
 }
 
-@export var speed: float = 5.0
-@export var sprint_speed: float = 8.5
+@export var speed: float = 7.0
+@export var sprint_speed: float = 10.5
 @export var jump_velocity: float = 4.5
 @export var gravity: float = 9.8
 
