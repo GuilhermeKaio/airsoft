@@ -41,7 +41,8 @@ func _initialize() -> void:
 		"test_weapon_magazine_compatibility",
 		"test_weapon_firing_and_dry_fire",
 		"test_hop_up_and_fire_mode",
-		"test_hop_up_unhandled_input_mouse_wheel"
+		"test_hop_up_unhandled_input_mouse_wheel",
+		"test_delegated_commands_api"
 	]
 
 	print("\n[Weapon & Integration]")
@@ -55,7 +56,30 @@ func _initialize() -> void:
 			print("  [PASSED] %s" % m)
 			passed += 1
 
-	# 3. Ammo HUD tests
+	# 3. Player input delegation tests (SRS Sections 2 & 3.1)
+	var player_test = load("res://tests/test_player.gd").new()
+	var player_methods = [
+		"test_player_weapon_reference",
+		"test_delegation_atirar",
+		"test_delegation_alternar_modo_tiro",
+		"test_delegation_recarregar",
+		"test_delegation_ajustar_hop_up",
+		"test_unhandled_input_delegation",
+		"test_player_and_real_weapon_integration"
+	]
+
+	print("\n[Player (Command Delegation)]")
+	for m in player_methods:
+		player_test._reset()
+		player_test.call(m)
+		if player_test._failed:
+			print("  [FAILED] %s -> %s" % [m, player_test._message])
+			failed += 1
+		else:
+			print("  [PASSED] %s" % m)
+			passed += 1
+
+	# 4. Ammo HUD tests
 	var hud_test = load("res://tests/test_ammo_hud.gd").new()
 	var hud_methods = [
 		"test_hud_initialization_with_weapon",

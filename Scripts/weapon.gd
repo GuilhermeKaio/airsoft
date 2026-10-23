@@ -72,6 +72,9 @@ var bb_mass_grams: float:
 
 
 func _ready() -> void:
+	# O input é delegado pelo Player conforme SRS Seções 2 e 3.1
+	set_process_unhandled_input(false)
+
 	if camera3:
 		_local_offset = camera3.global_transform.affine_inverse() * global_transform
 	
@@ -111,9 +114,7 @@ func _process(delta: float) -> void:
 		_fire_cooldown -= delta
 
 	if fire_mode == FireMode.AUTO and _trigger_held and _fire_cooldown <= 0.0:
-		if not Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
-			_trigger_held = false
-		elif equipped_magazine != null and not equipped_magazine.is_empty():
+		if equipped_magazine != null and not equipped_magazine.is_empty():
 			fire()
 			_fire_cooldown = 60.0 / rpm
 		else:
@@ -121,32 +122,63 @@ func _process(delta: float) -> void:
 			_start_reload()
 
 
-func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
-		_trigger_held = event.pressed
-		
-		if event.pressed and fire_mode == FireMode.SEMI and not is_reloading:
+## Delegação de Comandos (SRS Seções 2 e 3.1)
+func atirar(pressionado: bool) -> void:
+	_trigger_held = pressionado
+	if not pressionado:
+		return
+	if is_reloading:
+		return
+	if fire_mode == FireMode.SEMI:
+		if equipped_magazine != null and not equipped_magazine.is_empty():
+			if _fire_cooldown <= 0.0:
+				fire()
+				_fire_cooldown = 60.0 / rpm
+		else:
+			trigger_dry_fire()
+			_start_reload()
+	elif fire_mode == FireMode.AUTO:
+		if _fire_cooldown <= 0.0:
 			if equipped_magazine != null and not equipped_magazine.is_empty():
-				if _fire_cooldown <= 0.0:
-					fire()
-					_fire_cooldown = 60.0 / rpm
+				fire()
+				_fire_cooldown = 60.0 / rpm
 			else:
 				trigger_dry_fire()
 				_start_reload()
 
-	if event.is_action_pressed("toggle_fire_mode"):
-		toggle_fire_mode()
-		
-	if event.is_action_pressed("reload") and not is_reloading:
+
+func alternar_modo_tiro() -> void:
+	toggle_fire_mode()
+
+
+func recarregar() -> void:
+	if not is_reloading:
 		if equipped_magazine != null and not equipped_magazine.is_full():
 			_start_reload()
 
-	if event.is_action_pressed("hopup_increase"):
-		adjust_hop_up(hop_up_step)
+
+func reload() -> void:
+	recarregar()
+
+
+func ajustar_hop_up(delta_value: float) -> void:
+	adjust_hop_up(delta_value)
+
+
+## Fallback / compatibilidade: delega para as funções de comando
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action("fire") or (event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT):
+		atirar(event.pressed)
+	elif event.is_action_pressed("toggle_fire_mode"):
+		alternar_modo_tiro()
+	elif event.is_action_pressed("reload"):
+		recarregar()
+	elif event.is_action_pressed("hopup_increase") or (event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_WHEEL_UP and event.pressed):
+		ajustar_hop_up(hop_up_step)
 		if is_inside_tree() and get_viewport():
 			get_viewport().set_input_as_handled()
-	elif event.is_action_pressed("hopup_decrease"):
-		adjust_hop_up(-hop_up_step)
+	elif event.is_action_pressed("hopup_decrease") or (event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_WHEEL_DOWN and event.pressed):
+		ajustar_hop_up(-hop_up_step)
 		if is_inside_tree() and get_viewport():
 			get_viewport().set_input_as_handled()
 

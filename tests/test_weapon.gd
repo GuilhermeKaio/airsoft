@@ -171,3 +171,41 @@ func test_hop_up_unhandled_input_mouse_wheel() -> void:
 	assert_eq(weapon.spin_rad_s, 0.0, "Should clamp to min_hop_up via _unhandled_input")
 
 	weapon.free()
+
+
+func test_delegated_commands_api() -> void:
+	var weapon = WeaponClass.new()
+	weapon.compatible_magazine_type = MagazineClass.Type.MAG_PISTOL_GLOCK
+	weapon.equipped_magazine = MagazineClass.new(MagazineClass.Type.MAG_PISTOL_GLOCK, 25, 20, 0.00025)
+	weapon._ready()
+
+	# 1. alternar_modo_tiro
+	assert_eq(weapon.fire_mode, WeaponClass.FireMode.SEMI)
+	weapon.alternar_modo_tiro()
+	assert_eq(weapon.fire_mode, WeaponClass.FireMode.AUTO)
+	weapon.alternar_modo_tiro()
+	assert_eq(weapon.fire_mode, WeaponClass.FireMode.SEMI)
+
+	# 2. ajustar_hop_up
+	var prev_hop = weapon.spin_rad_s
+	weapon.ajustar_hop_up(100.0)
+	assert_eq(weapon.spin_rad_s, prev_hop + 100.0)
+
+	# 3. atirar in SEMI mode with dummy bb scene
+	var packed_scene = PackedScene.new()
+	var dummy_node = Node3D.new()
+	packed_scene.pack(dummy_node)
+	dummy_node.free()
+	weapon.bb_scene = packed_scene
+
+	assert_eq(weapon.current_ammo, 20)
+	weapon.atirar(true)
+	assert_eq(weapon.current_ammo, 19, "atirar(true) should trigger fire in SEMI mode")
+	weapon.atirar(false)
+	assert_eq(weapon.current_ammo, 19, "atirar(false) release should not fire")
+
+	# 4. recarregar
+	weapon.recarregar()
+	assert_true(weapon.is_reloading, "recarregar() should start reload process when magazine is not full")
+
+	weapon.free()
