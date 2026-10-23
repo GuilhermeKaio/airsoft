@@ -145,9 +145,13 @@ func test_temporary_notifications() -> void:
 	var hud = AmmoHUDClass.new()
 	hud.setup(weapon)
 
-	# Dry fire should NOT show "SEM MUNIÇÃO"
+	# Dry fire notification (SRS 3.3.1 e 3.5.2)
 	weapon.dry_fired.emit()
-	assert_false("SEM MUNIÇÃO" in hud.text, "Dry fire notification should not appear in HUD")
+	assert_true("SEM MUNIÇÃO" in hud.text, "Dry fire notification should appear in HUD")
+
+	# Disparo seco signal alias
+	weapon.disparo_seco.emit()
+	assert_true("SEM MUNIÇÃO" in hud.text, "disparo_seco signal should also display SEM MUNIÇÃO in HUD")
 
 	weapon.incompatible_magazine.emit()
 	assert_true("CARREGADOR INCOMPATÍVEL" in hud.text, "Incompatible magazine notification should appear in HUD")

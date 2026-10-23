@@ -92,27 +92,51 @@ func setup(target_weapon: Node) -> void:
 func _connect_weapon(w: Node) -> void:
 	if w.has_signal("ammo_changed") and not w.ammo_changed.is_connected(_on_ammo_changed):
 		w.ammo_changed.connect(_on_ammo_changed)
+	if w.has_signal("municao_alterada") and not w.municao_alterada.is_connected(_on_ammo_changed):
+		w.municao_alterada.connect(_on_ammo_changed)
 	if w.has_signal("fire_mode_changed") and not w.fire_mode_changed.is_connected(_on_fire_mode_changed):
 		w.fire_mode_changed.connect(_on_fire_mode_changed)
+	if w.has_signal("modo_tiro_alterado") and not w.modo_tiro_alterado.is_connected(_on_fire_mode_changed):
+		w.modo_tiro_alterado.connect(_on_fire_mode_changed)
 	if w.has_signal("hop_up_adjusted") and not w.hop_up_adjusted.is_connected(_on_hop_up_adjusted):
 		w.hop_up_adjusted.connect(_on_hop_up_adjusted)
+	if w.has_signal("hop_up_ajustado") and not w.hop_up_ajustado.is_connected(_on_hop_up_adjusted):
+		w.hop_up_ajustado.connect(_on_hop_up_adjusted)
 	if w.has_signal("magazine_equipped") and not w.magazine_equipped.is_connected(_on_magazine_equipped):
 		w.magazine_equipped.connect(_on_magazine_equipped)
 	if w.has_signal("incompatible_magazine") and not w.incompatible_magazine.is_connected(_on_incompatible_magazine):
 		w.incompatible_magazine.connect(_on_incompatible_magazine)
+	if w.has_signal("carregador_incompativel") and not w.carregador_incompativel.is_connected(_on_incompatible_magazine):
+		w.carregador_incompativel.connect(_on_incompatible_magazine)
+	if w.has_signal("dry_fired") and not w.dry_fired.is_connected(_on_dry_fired):
+		w.dry_fired.connect(_on_dry_fired)
+	if w.has_signal("disparo_seco") and not w.disparo_seco.is_connected(_on_dry_fired):
+		w.disparo_seco.connect(_on_dry_fired)
 
 
 func _disconnect_weapon(w: Node) -> void:
 	if w.has_signal("ammo_changed") and w.ammo_changed.is_connected(_on_ammo_changed):
 		w.ammo_changed.disconnect(_on_ammo_changed)
+	if w.has_signal("municao_alterada") and w.municao_alterada.is_connected(_on_ammo_changed):
+		w.municao_alterada.disconnect(_on_ammo_changed)
 	if w.has_signal("fire_mode_changed") and w.fire_mode_changed.is_connected(_on_fire_mode_changed):
 		w.fire_mode_changed.disconnect(_on_fire_mode_changed)
+	if w.has_signal("modo_tiro_alterado") and w.modo_tiro_alterado.is_connected(_on_fire_mode_changed):
+		w.modo_tiro_alterado.disconnect(_on_fire_mode_changed)
 	if w.has_signal("hop_up_adjusted") and w.hop_up_adjusted.is_connected(_on_hop_up_adjusted):
 		w.hop_up_adjusted.disconnect(_on_hop_up_adjusted)
+	if w.has_signal("hop_up_ajustado") and w.hop_up_ajustado.is_connected(_on_hop_up_adjusted):
+		w.hop_up_ajustado.disconnect(_on_hop_up_adjusted)
 	if w.has_signal("magazine_equipped") and w.magazine_equipped.is_connected(_on_magazine_equipped):
 		w.magazine_equipped.disconnect(_on_magazine_equipped)
 	if w.has_signal("incompatible_magazine") and w.incompatible_magazine.is_connected(_on_incompatible_magazine):
 		w.incompatible_magazine.disconnect(_on_incompatible_magazine)
+	if w.has_signal("carregador_incompativel") and w.carregador_incompativel.is_connected(_on_incompatible_magazine):
+		w.carregador_incompativel.disconnect(_on_incompatible_magazine)
+	if w.has_signal("dry_fired") and w.dry_fired.is_connected(_on_dry_fired):
+		w.dry_fired.disconnect(_on_dry_fired)
+	if w.has_signal("disparo_seco") and w.disparo_seco.is_connected(_on_dry_fired):
+		w.disparo_seco.disconnect(_on_dry_fired)
 
 
 func _sync_from_weapon() -> void:
@@ -172,6 +196,14 @@ func _on_magazine_equipped(mag: Resource) -> void:
 
 func _on_incompatible_magazine() -> void:
 	_show_notification("CARREGADOR INCOMPATÍVEL")
+
+
+func _on_dry_fired() -> void:
+	_show_notification("SEM MUNIÇÃO")
+
+
+func _on_disparo_seco() -> void:
+	_on_dry_fired()
 
 
 func _on_bullet_tracing_toggled(enabled: bool) -> void:

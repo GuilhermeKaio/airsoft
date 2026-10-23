@@ -7,6 +7,9 @@ const CROSS_SECTIONAL_AREA = PI * (RADIUS * RADIUS)
 const GROUP_PROJECTILE := "bb_projectile"
 const GROUP_PROJETIL := GROUP_PROJECTILE
 
+signal despawned()
+signal despawn_triggered()
+
 static var global_trail_enabled: bool = true
 
 static func set_global_trail_enabled(enabled: bool, tree: SceneTree = null) -> void:
@@ -27,9 +30,61 @@ static func is_global_trail_enabled() -> bool:
 
 var hit_ground: bool = false
 var _trail_recording: bool = true
+var _is_despawning: bool = false
 
+@export_group("Flight Timeout & Despawn (SRS 3.6)")
+@export var max_flight_time: float = 10.0
+@export var post_collision_flight_time: float = 5.0
+@export var despawn_on_collision: bool = true
+
+var collision_despawn_delay: float:
+	get:
+		return post_collision_flight_time
+	set(value):
+		post_collision_flight_time = value
+
+var collision_flight_time: float:
+	get:
+		return post_collision_flight_time
+	set(value):
+		post_collision_flight_time = value
+
+var tempo_limite_apos_colisao: float:
+	get:
+		return post_collision_flight_time
+	set(value):
+		post_collision_flight_time = value
+
+var flight_time_limit: float:
+	get:
+		return max_flight_time
+	set(value):
+		max_flight_time = value
+
+var tempo_limite_voo: float:
+	get:
+		return max_flight_time
+	set(value):
+		max_flight_time = value
+
+var current_flight_time: float = 0.0
+
+var flight_time: float:
+	get:
+		return current_flight_time
+	set(value):
+		current_flight_time = value
+
+var tempo_voo: float:
+	get:
+		return current_flight_time
+	set(value):
+		current_flight_time = value
+
+@export_group("Aerodynamics & Ballistics")
 @export var magnus_coefficient: float = 1.0
 
+@export_group("Trail Rendering")
 @export var trail_enabled: bool = true
 @export var trail_max_points: int = 40
 @export var trail_lifetime: float = 0.4
@@ -86,11 +141,15 @@ func _on_body_entered(body: Node) -> void:
 	if hit_ground:
 		return
 
-	if body.is_in_group(GROUP_PROJECTILE) or body.is_in_group("bb_projetil"):
+	if body != null and (body.is_in_group(GROUP_PROJECTILE) or body.is_in_group("bb_projetil")):
 		if "hit_ground" in body and body.hit_ground:
 			_stop_trail_recording()
+			if despawn_on_collision:
+				_handle_collision_despawn()
 	else:
 		_stop_trail_recording()
+		if despawn_on_collision:
+			_handle_collision_despawn()
 
 
 func _stop_trail_recording() -> void:
@@ -98,7 +157,67 @@ func _stop_trail_recording() -> void:
 	_trail_recording = false
 
 
-func _physics_process(_delta: float) -> void:
+func _handle_collision_despawn() -> void:
+	if _is_despawning:
+		return
+	max_flight_time = post_collision_flight_time
+	current_flight_time = 0.0
+	if max_flight_time <= 0.0:
+		despawn()
+	elif is_inside_tree():
+		get_tree().create_timer(max_flight_time).timeout.connect(func():
+			if not is_despawned():
+				despawn()
+		)
+
+
+func advance_flight_time(delta: float) -> void:
+	if _is_despawning:
+		return
+	current_flight_time += delta
+	if max_flight_time > 0.0 and current_flight_time >= max_flight_time:
+		despawn()
+
+
+func reset_flight_time() -> void:
+	current_flight_time = 0.0
+
+
+func get_flight_time() -> float:
+	return current_flight_time
+
+
+func get_remaining_flight_time() -> float:
+	if max_flight_time <= 0.0:
+		return INF
+	return maxf(0.0, max_flight_time - current_flight_time)
+
+
+func is_despawned() -> bool:
+	return _is_despawning or is_queued_for_deletion()
+
+
+func despawn() -> void:
+	if _is_despawning and is_queued_for_deletion():
+		return
+	_is_despawning = true
+	_stop_trail_recording()
+	set_trail_enabled(false)
+	despawn_triggered.emit()
+	despawned.emit()
+	if not is_queued_for_deletion():
+		queue_free()
+
+
+func remover() -> void:
+	despawn()
+
+
+func _physics_process(delta: float) -> void:
+	advance_flight_time(delta)
+	if _is_despawning or is_queued_for_deletion():
+		return
+
 	var current_velocity = linear_velocity
 	var speed = current_velocity.length()
 
@@ -117,6 +236,8 @@ func _physics_process(_delta: float) -> void:
 
 
 func _process(delta: float) -> void:
+	if _is_despawning or is_queued_for_deletion():
+		return
 	if not trail_enabled:
 		return
 	_age_trail_points(delta)

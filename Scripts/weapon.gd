@@ -271,7 +271,7 @@ func _process(delta: float) -> void:
 			_fire_cooldown = get_fire_interval()
 		else:
 			trigger_dry_fire()
-			_start_reload()
+			_fire_cooldown = get_fire_interval()
 
 
 ## Delegação de Comandos (SRS Seções 2 e 3.1)
@@ -290,7 +290,7 @@ func atirar(pressionado: bool) -> void:
 		_fire_cooldown = get_fire_interval()
 	else:
 		trigger_dry_fire()
-		_start_reload()
+		_fire_cooldown = get_fire_interval()
 
 
 func alternar_modo_tiro() -> void:

@@ -253,6 +253,29 @@ func _initialize() -> void:
 			print("  [PASSED] %s" % m)
 			passed += 1
 
+	# 11. BB Flight Timeout / Despawn & Dry Fire HUD (SRS 3.3.1, 3.5.2 & 3.6)
+	var bb_despawn_test = load("res://tests/test_bb_despawn.gd").new()
+	var bb_despawn_methods = [
+		"test_bb_flight_time_limit_configuration",
+		"test_bb_flight_time_accumulation_and_despawn",
+		"test_bb_physics_process_triggers_despawn",
+		"test_bb_collision_despawn",
+		"test_bb_trail_cleanup_upon_despawn",
+		"test_bb_flight_time_helpers",
+		"test_dry_fire_hud_notification_integration"
+	]
+
+	print("\n[BB Flight Timeout, Despawn & HUD Dry Fire (SRS 3.3.1, 3.5.2 & 3.6)]")
+	for m in bb_despawn_methods:
+		bb_despawn_test._reset()
+		bb_despawn_test.call(m)
+		if bb_despawn_test._failed:
+			print("  [FAILED] %s -> %s" % [m, bb_despawn_test._message])
+			failed += 1
+		else:
+			print("  [PASSED] %s" % m)
+			passed += 1
+
 	print("\n==================================================")
 	print("--- TOTAL: %d passed, %d failed ---" % [passed, failed])
 	print("==================================================")
