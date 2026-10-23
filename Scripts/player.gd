@@ -5,6 +5,8 @@ signal arma_trocada(nova_arma: Node, slot_index: int)
 signal slot_selected(slot_index: int)
 signal bullet_tracing_toggled(enabled: bool)
 signal tracing_balas_alternado(habilitado: bool)
+signal shot_fired(count: int)
+signal tiro_disparado(count: int)
 
 # Sinais de Dispersão Cinemática e Counter-Strafing (SRS Adicionais Seção 7)
 signal movement_spread_changed(current_spread_deg: float, state: int)
@@ -188,6 +190,9 @@ func select_slot(slot_index: int, force: bool = false) -> bool:
 	if weapon != null and weapon.has_method("_emit_initial_state"):
 		weapon._emit_initial_state()
 
+	if weapon != null and weapon.has_signal("shot_fired") and not weapon.shot_fired.is_connected(_on_weapon_shot_fired):
+		weapon.shot_fired.connect(_on_weapon_shot_fired)
+
 	weapon_swapped.emit(weapon, active_slot)
 	arma_trocada.emit(weapon, active_slot)
 	slot_selected.emit(active_slot)
@@ -211,6 +216,11 @@ func reset_recoil() -> void:
 		w.reset_recoil()
 	if main_camera and main_camera.has_method("reset_recoil"):
 		main_camera.reset_recoil()
+
+
+func _on_weapon_shot_fired(count: int = 1) -> void:
+	shot_fired.emit(count)
+	tiro_disparado.emit(count)
 
 
 ## Delegação de Comandos para a Arma Ativa (SRS Seções 2 e 3.1)

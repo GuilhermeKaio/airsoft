@@ -163,6 +163,12 @@ func _on_body_entered(body: Node) -> void:
 	if hit_ground:
 		return
 
+	if body != null:
+		if body.has_method("on_hit"):
+			body.on_hit(self)
+		elif body.get_parent() != null and body.get_parent().has_method("on_hit"):
+			body.get_parent().on_hit(self)
+
 	if body != null and (body.is_in_group(GROUP_PROJECTILE) or body.is_in_group("bb_projetil")):
 		if "hit_ground" in body and body.hit_ground:
 			_stop_trail_recording()

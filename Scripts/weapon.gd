@@ -29,6 +29,8 @@ signal recoil_applied(pitch_deg: float, yaw_deg: float, shot_index: int)
 signal recuo_aplicado(pitch_deg: float, yaw_deg: float, shot_index: int)
 signal recoil_recovered()
 signal recuo_recuperado()
+signal shot_fired(projectiles_count: int)
+signal tiro_disparado(projectiles_count: int)
 
 @export_group("Recoil & Spray Pattern (SRS Adicionais Seção 3)")
 @export var recoil_enabled: bool = true
@@ -678,6 +680,8 @@ func fire() -> void:
 	
 	ammo_changed.emit(equipped_magazine.current_ammo, equipped_magazine.capacity)
 	municao_alterada.emit(equipped_magazine.current_ammo, equipped_magazine.capacity)
+	shot_fired.emit(count_to_fire)
+	tiro_disparado.emit(count_to_fire)
 
 	# v = sqrt(2E / m) para cálculo de velocidade com a massa da BB equipada (SRS 3.2.1)
 	var bb_mass_kg: float = equipped_magazine.bb_mass_kg

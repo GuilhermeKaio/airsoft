@@ -408,6 +408,36 @@ func _initialize() -> void:
 			print("  [PASSED] %s" % m)
 			passed += 1
 
+	# 18. Shooting Gallery & Targets & Scoring Manager (SRS Adicionais Seções 1 & 2)
+	var gallery_test = load("res://tests/test_shooting_gallery.gd").new()
+	var gallery_methods = [
+		"test_target_classification_and_properties",
+		"test_target_hit_reaction_and_knockdown",
+		"test_target_kinematics_linear_patrol",
+		"test_target_kinematics_popup",
+		"test_scoring_and_combo_multipliers",
+		"test_missed_shot_and_combo_decay",
+		"test_session_modes_and_accuracy",
+		"test_normative_signals_contract",
+		"test_bb_target_impact_integration",
+		"test_standalone_score_system"
+	]
+
+	print("\n[Shooting Gallery & Scoring Manager (SRS Adicionais Seções 1 & 2)]")
+	for m in gallery_methods:
+		gallery_test._reset()
+		gallery_test.call(m)
+		if gallery_test._failed:
+			print("  [FAILED] %s -> %s" % [m, gallery_test._message])
+			failed += 1
+		else:
+			print("  [PASSED] %s" % m)
+			passed += 1
+			failed += 1
+		else:
+			print("  [PASSED] %s" % m)
+			passed += 1
+
 	print("\n==================================================")
 	print("--- TOTAL: %d passed, %d failed ---" % [passed, failed])
 	print("==================================================")
