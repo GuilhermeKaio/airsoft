@@ -95,7 +95,7 @@ var simplified_energy_joules: float:
 @export var min_hop_up: float = 0.0
 @export var max_hop_up: float = 2500.0
 @export var hop_up_step: float = 50.0
-@export var bullet_tracing_enabled: bool = true
+@export var bullet_tracing_enabled: bool = false
 
 const METERS_TO_FEET: float = 3.28084
 

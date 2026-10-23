@@ -13,13 +13,26 @@ func _ready() -> void:
 
 	var gallery_mgr = get_node_or_null("ShootingGalleryManager")
 	var gallery_hud = get_node_or_null("HUD/ShootingGalleryHUD")
+	var spawn_area = get_node_or_null("TargetSpawnArea")
+	var control_panel = get_node_or_null("ShootingGalleryControlPanel")
 	var player_node = get_node_or_null("Player")
 	if gallery_mgr:
+		if spawn_area and gallery_mgr.has_method("set_spawn_area"):
+			gallery_mgr.set_spawn_area(spawn_area)
+		if control_panel and control_panel.has_method("setup_manager"):
+			control_panel.setup_manager(gallery_mgr)
 		if player_node and gallery_mgr.has_method("setup_player"):
 			gallery_mgr.setup_player(player_node)
 		if gallery_hud and gallery_hud.has_method("setup"):
 			gallery_hud.setup(gallery_mgr)
 		gallery_mgr.discover_targets(self)
+
+	# Trail de balas começa desabilitada por padrão
+	var BBClass = preload("res://Scripts/bb.gd")
+	if BBClass and "set_global_trail_enabled" in BBClass:
+		BBClass.set_global_trail_enabled(false, get_tree())
+	if player_node and player_node.has_method("set_bullet_tracing"):
+		player_node.set_bullet_tracing(false)
 
 
 func _input(event: InputEvent) -> void:

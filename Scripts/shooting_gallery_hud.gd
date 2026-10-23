@@ -7,27 +7,33 @@ extends Control
 @export var gallery_manager_path: NodePath = ^"../../ShootingGalleryManager"
 @onready var gallery_manager: ShootingGalleryManager = get_node_or_null(gallery_manager_path)
 
-@onready var score_label: Label = $ScoreContainer/ScoreLabel
-@onready var combo_label: Label = $ScoreContainer/ComboLabel
-@onready var timer_label: Label = $TimerContainer/TimerLabel
-@onready var stats_label: Label = $StatsContainer/StatsLabel
-@onready var notification_label: Label = $NotificationLabel
-@onready var summary_panel: PanelContainer = $SummaryPanel
-@onready var summary_label: Label = $SummaryPanel/SummaryVBox/SummaryContentLabel
-@onready var restart_button: Button = $SummaryPanel/SummaryVBox/RestartButton
+@onready var score_label: Label = find_child("ScoreLabel", true, false)
+@onready var combo_label: Label = find_child("ComboLabel", true, false)
+@onready var timer_label: Label = find_child("TimerLabel", true, false)
+@onready var stats_label: Label = find_child("StatsLabel", true, false)
+@onready var notification_label: Label = find_child("NotificationLabel", true, false)
+@onready var summary_panel: PanelContainer = find_child("SummaryPanel", true, false)
+@onready var summary_label: Label = find_child("SummaryContentLabel", true, false)
+@onready var restart_button: Button = find_child("RestartButton", true, false)
+@onready var close_button: Button = find_child("CloseButton", true, false)
 
 var _notification_tween: Tween = null
 
 
 func _ready() -> void:
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_hide_summary()
+	if summary_panel:
+		summary_panel.visible = false
+		summary_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	_find_and_setup_manager()
 	call_deferred("_find_and_setup_manager")
 
-	if restart_button:
+	if restart_button and not restart_button.pressed.is_connected(_on_restart_pressed):
 		restart_button.pressed.connect(_on_restart_pressed)
+	if close_button and not close_button.pressed.is_connected(_on_close_pressed):
+		close_button.pressed.connect(_on_close_pressed)
 
 
 func _find_and_setup_manager() -> void:
@@ -60,6 +66,8 @@ func setup(manager: ShootingGalleryManager) -> void:
 		gallery_manager.sessao_iniciada.connect(_on_sessao_iniciada)
 	if not gallery_manager.sessao_encerrada.is_connected(_on_sessao_encerrada):
 		gallery_manager.sessao_encerrada.connect(_on_sessao_encerrada)
+	if gallery_manager.has_signal("alvo_desapareceu") and not gallery_manager.alvo_desapareceu.is_connected(_on_alvo_desapareceu):
+		gallery_manager.alvo_desapareceu.connect(_on_alvo_desapareceu)
 
 	_update_labels(gallery_manager.score, gallery_manager.combo, gallery_manager.combo_multiplier)
 
@@ -79,6 +87,15 @@ func _process(_delta: float) -> void:
 					timer_label.modulate = Color(1.0, 1.0, 1.0, 1.0)
 			else:
 				timer_label.text = "TEMPO: 00.0s"
+		elif gallery_manager.session_mode == ShootingGalleryManager.SessionMode.TIME_ATTACK_HARD:
+			if gallery_manager.is_session_active:
+				timer_label.text = "HARD: %04.1fs [JANELA: %.1fs]" % [gallery_manager.time_remaining, gallery_manager.get_despawn_duration()]
+				if gallery_manager.time_remaining <= 10.0:
+					timer_label.modulate = Color(1.0, 0.3, 0.3, 1.0)
+				else:
+					timer_label.modulate = Color(1.0, 0.7, 0.2, 1.0)
+			else:
+				timer_label.text = "HARD: 00.0s"
 		else:
 			timer_label.text = "MODO: TREINO LIVRE"
 
@@ -125,42 +142,73 @@ func _on_alvo_atingido(_alvo: Node, tipo_alvo: int, delta_pontos: int, multiplic
 	_show_notification(text, color)
 
 
-func _on_sessao_iniciada(_tempo_limite: float) -> void:
+func _on_sessao_iniciada(_tempo_limite: float, modo: int = 0) -> void:
 	_hide_summary()
-	_show_notification("TREINO INICIADO! ATIRE NOS INIMIGOS!", Color(0.4, 0.8, 1.0))
+	var mode_name = "TIME ATTACK"
+	if modo == 1:
+		mode_name = "TREINO LIVRE"
+	elif modo == 2:
+		mode_name = "TIME ATTACK HARD"
+
+	_show_notification("SESSÃO INICIADA (%s)!" % mode_name, Color(0.4, 0.8, 1.0))
 	if score_label:
 		score_label.text = "PONTOS: 0"
 	if combo_label:
 		combo_label.visible = false
 
 
+func _on_alvo_desapareceu(_alvo: Node) -> void:
+	_show_notification("ALVO SUMIU! COMBO PERDIDO", Color(1.0, 0.45, 0.1))
+
+
 func _on_sessao_encerrada(pontuacao_final: int, precisao: float, acertos: int, penalidades: int) -> void:
+	# O modo Treino Livre nunca apresenta a tela de fim de sessão
+	if gallery_manager and gallery_manager.session_mode == ShootingGalleryManager.SessionMode.FREE_PRACTICE:
+		return
 	_show_summary(pontuacao_final, precisao, acertos, penalidades)
 
 
-func _show_summary(pontuacao_final: int, precisao: float, acertos: int, penalidades: int) -> void:
+func _show_summary(pontuacao_final: int, precisao: float, acertos: int, _penalidades: int = 0) -> void:
 	if summary_panel:
 		summary_panel.visible = true
 		summary_panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	if summary_label:
-		summary_label.text = "FIM DA SESSÃO!\n\nPontuação Final: %d\nPrecisão: %.1f%%\nInimigos Abatidos: %d\nPenalidades (Civis): %d" % [
+		summary_label.text = "FIM DA SESSÃO!\n\nPontuação Final: %d\nPrecisão: %.1f%%\nInimigos Abatidos: %d" % [
 			pontuacao_final,
 			precisao,
-			acertos,
-			penalidades
+			acertos
 		]
+	if is_inside_tree() and get_tree():
+		get_tree().paused = true
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
 
 func _hide_summary() -> void:
 	if summary_panel:
 		summary_panel.visible = false
 		summary_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if is_inside_tree() and get_tree() and get_tree().paused:
+		get_tree().paused = false
+	if Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
+		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
 
 func _on_restart_pressed() -> void:
 	_hide_summary()
 	if gallery_manager:
 		gallery_manager.iniciar_sessao()
+
+
+func _on_close_pressed() -> void:
+	_hide_summary()
+
+
+func _input(event: InputEvent) -> void:
+	if summary_panel and summary_panel.visible:
+		if event.is_action_pressed("ui_cancel") or (event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE):
+			_hide_summary()
+			if is_inside_tree() and get_viewport():
+				get_viewport().set_input_as_handled()
 
 
 func _show_notification(msg: String, color: Color = Color.WHITE) -> void:

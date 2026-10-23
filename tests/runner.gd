@@ -437,6 +437,60 @@ func _initialize() -> void:
 			print("  [PASSED] %s" % m)
 			passed += 1
 
+	# 12. Target Spawn Area (SRS Adicionais Seção 1.4)
+	var spawn_area_test = load("res://tests/test_target_spawn_area.gd").new()
+	var spawn_area_methods = [
+		"test_spawn_area_bounds_specifications",
+		"test_random_points_strictly_within_bounds",
+		"test_anti_overlap_validation_and_rejection",
+		"test_spawn_multiple_targets_respects_separation",
+		"test_target_removal_and_lifecycle",
+		"test_local_to_world_transform_mapping",
+		"test_editor_vs_ingame_visualization"
+	]
+
+	print("\n[Target Spawn Area & Anti-Overlap (SRS Adicionais Seção 1.4)]")
+	for m in spawn_area_methods:
+		spawn_area_test._reset()
+		spawn_area_test.call(m)
+		if spawn_area_test._failed:
+			print("  [FAILED] %s -> %s" % [m, spawn_area_test._message])
+			failed += 1
+		else:
+			print("  [PASSED] %s" % m)
+			passed += 1
+
+	# 13. Shooting Gallery Control Panel & 3 Modes (SRS Adicionais Seções 2.1 - 2.4)
+	var panel_test = load("res://tests/test_control_panel.gd").new()
+	var panel_methods = [
+		"test_control_panel_initialization_and_buttons",
+		"test_game_modes_selection_sync",
+		"test_despawn_speeds_selection_sync",
+		"test_dual_trigger_mechanism_bb_and_interact",
+		"test_high_score_recording_and_display",
+		"test_mode_time_attack_sequential_spawn",
+		"test_mode_free_practice_replenishment",
+		"test_mode_time_attack_hard_timeout_and_combo_reset",
+		"test_normative_signals_contract_extended",
+		"test_main_scene_integration",
+		"test_panel_scale_5x",
+		"test_default_practice_mode_and_hard_single_target_enforcement",
+		"test_end_session_pause_mouse_mode_and_no_penalties_line",
+		"test_mode_change_ends_active_session",
+		"test_free_practice_no_end_session_screen"
+	]
+
+	print("\n[Control Panel & 3 Game Modes (SRS Adicionais Seções 2.1 - 2.4)]")
+	for m in panel_methods:
+		panel_test._reset()
+		panel_test.call(m)
+		if panel_test._failed:
+			print("  [FAILED] %s -> %s" % [m, panel_test._message])
+			failed += 1
+		else:
+			print("  [PASSED] %s" % m)
+			passed += 1
+
 	print("\n==================================================")
 	print("--- TOTAL: %d passed, %d failed ---" % [passed, failed])
 	print("==================================================")

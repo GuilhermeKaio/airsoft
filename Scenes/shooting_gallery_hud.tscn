@@ -15,6 +15,7 @@ corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
 
 [node name="ShootingGalleryHUD" type="Control" unique_id=766197121]
+process_mode = 3
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -133,13 +134,24 @@ text = "FIM DA SESSÃO!
 
 Pontuação Final: 1200
 Precisão: 85.0%
-Inimigos Abatidos: 10
-Penalidades (Civis): 1"
+Inimigos Abatidos: 10"
 horizontal_alignment = 1
 
-[node name="RestartButton" type="Button" parent="SummaryPanel/SummaryVBox" unique_id=1738222293]
+[node name="SummaryButtonsHBox" type="HBoxContainer" parent="SummaryPanel/SummaryVBox" unique_id=987162541]
+layout_mode = 2
+theme_override_constants/separation = 16
+alignment = 1
+
+[node name="RestartButton" type="Button" parent="SummaryPanel/SummaryVBox/SummaryButtonsHBox" unique_id=1738222293]
 custom_minimum_size = Vector2(160, 40)
 layout_mode = 2
 size_flags_horizontal = 4
 theme_override_font_sizes/font_size = 16
 text = "Reiniciar Sessão"
+
+[node name="CloseButton" type="Button" parent="SummaryPanel/SummaryVBox/SummaryButtonsHBox" unique_id=1738222294]
+custom_minimum_size = Vector2(120, 40)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 16
+text = "Fechar"

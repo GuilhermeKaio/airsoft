@@ -20,7 +20,8 @@
 [ext_resource type="PackedScene" uid="uid://bocw8cq0ppeu5" path="res://Scenes/weapon_pickup.tscn" id="18_weapon_pickup"]
 [ext_resource type="Script" uid="uid://bxbbi3rbtu2i0" path="res://Scripts/shooting_gallery_manager.gd" id="19_gallery_mgr"]
 [ext_resource type="PackedScene" uid="uid://b0g6galhudscn" path="res://Scenes/shooting_gallery_hud.tscn" id="20_gallery_hud"]
-[ext_resource type="PackedScene" uid="uid://c5tgtgalscn01" path="res://Scenes/shooting_target.tscn" id="21_target"]
+[ext_resource type="PackedScene" uid="uid://dmvbkjdulggxw" path="res://Scenes/target_spawn_area.tscn" id="22_spawn_area"]
+[ext_resource type="PackedScene" uid="uid://d3gtlfsboar2w" path="res://Scenes/shooting_gallery_control_panel.tscn" id="23_control_panel"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_8gbba"]
 sky_top_color = Color(0.60895693, 0.34373838, 0.63823307, 1)
@@ -63,30 +64,20 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 182.79004, -0.4957536, 9.0620
 size = Vector3(2135.9707, 1, 878.158)
 
 [node name="Parede" type="CSGBox3D" parent="CSGCombiner3D" unique_id=1902478398]
-transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, -51.863976, 3, -11.341583)
-size = Vector3(1, 7, 61.100037)
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, -39.113136, 3, -11.341582)
+size = Vector3(1, 7, 35.59836)
 
 [node name="Parede5" type="CSGBox3D" parent="CSGCombiner3D" unique_id=1101561742]
-transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, -51.863976, 3, 23.51159)
-size = Vector3(1, 7, 61.100037)
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, -38.816444, 3, 23.51159)
+size = Vector3(1, 7, 35.004974)
 
 [node name="Parede4" type="CSGBox3D" parent="CSGCombiner3D" unique_id=2058476133]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -82.757095, 3, 6.460104)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -55.93757, 3, 6.460104)
 size = Vector3(1, 7, 35.99875)
 
 [node name="Parede6" type="CSGBox3D" parent="CSGCombiner3D" unique_id=403356672]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -21.816391, -1.7196894, 6.232355)
 size = Vector3(1, 7, 35.202568)
-
-[node name="Parede2" type="CSGBox3D" parent="CSGCombiner3D" unique_id=1486400473]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18.89406, 3, 0.5)
-visible = false
-size = Vector3(1, 7, 10)
-
-[node name="Parede3" type="CSGBox3D" parent="CSGCombiner3D" unique_id=164670250]
-transform = Transform3D(0.913978, -0.4057638, 0, 0.4057638, 0.913978, 0, 0, 0, 1, -43.345505, 3, 0.5)
-visible = false
-size = Vector3(1, 7, 10)
 
 [node name="HUD" type="CanvasLayer" parent="." unique_id=1651058074]
 
@@ -153,65 +144,46 @@ transform = Transform3D(-0.999822, 0, -0.018865809, 0, 1, 0, 0.018865809, 0, -0.
 [node name="PauseScreen" parent="." unique_id=842650682 instance=ExtResource("11_d1ilt")]
 
 [node name="Pickup_Glock_025g" parent="." unique_id=191975251 instance=ExtResource("12_pickup")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.5, 0.6, 2.6)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.5, 0.6, 8.329681)
 magazine = ExtResource("13_glock_025")
 
 [node name="Pickup_Glock_030g" parent="." unique_id=1440274697 instance=ExtResource("12_pickup")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 11.5, 0.6, 2.6)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 11.5, 0.6, 8.329681)
 magazine = ExtResource("14_glock_030")
 
 [node name="Pickup_STANAG_Incompatible" parent="." unique_id=1586242246 instance=ExtResource("12_pickup")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.5, 0.6, 5.6)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.5, 0.6, 11.329681)
 magazine = ExtResource("15_stanag_025")
 
 [node name="Pickup_Shotgun_Incompatible" parent="." unique_id=1973508311 instance=ExtResource("12_pickup")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.5, 0.6, -0.4)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.5, 0.6, 5.329682)
 magazine = ExtResource("16_shotgun_020")
 
 [node name="Pickup_1911" parent="." unique_id=1973508312 instance=ExtResource("12_pickup")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.5, 0.6, 8.6)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.5, 0.6, 14.329682)
 magazine = ExtResource("17_p1911_020")
 
 [node name="WeaponPickup_Shotgun" parent="." unique_id=1973508313 instance=ExtResource("18_weapon_pickup")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6, 0.6, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6, 0.6, -5.1176457)
 weapon_model = 0
 
 [node name="WeaponPickup_1911" parent="." unique_id=1973508314 instance=ExtResource("18_weapon_pickup")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 11, 0.6, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 11, 0.6, -5.1176457)
 weapon_model = 2
+
+[node name="TargetSpawnArea" parent="." unique_id=295151677 instance=ExtResource("22_spawn_area")]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -14.84631, 0.7780466, 2.67)
+lateral_min = -10.275
+lateral_max = 16.855
+depth_min = 9.33
+depth_max = 39.075
+height_max = 1.255
+manager_path = NodePath("../ShootingGalleryManager")
+
+[node name="ShootingGalleryControlPanel" parent="." unique_id=295151678 instance=ExtResource("23_control_panel")]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, -0.6231451, 0, 24.566599)
+manager_path = NodePath("../ShootingGalleryManager")
 
 [node name="ShootingGalleryManager" type="Node" parent="." unique_id=295151676]
 script = ExtResource("19_gallery_mgr")
-session_mode = 0
-
-[node name="Target_Enemy_10m" parent="." unique_id=766205888 instance=ExtResource("21_target")]
-transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -32.30448, 0, 2.67)
-
-[node name="Target_Enemy_20m" parent="." unique_id=2039147745 instance=ExtResource("21_target")]
-transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -42.30448, 0, 2.67)
-
-[node name="Target_Civilian_20m" parent="." unique_id=1658869752 instance=ExtResource("21_target")]
-transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -42.30448, 0, 1.2)
-target_type = 1
-points_value = -200
-
-[node name="Target_Patrol_25m" parent="." unique_id=1410881058 instance=ExtResource("21_target")]
-transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -47.30448, 0, 2.67)
-movement_type = 1
-move_speed = 3.5
-patrol_axis = Vector3(0, 0, 1)
-
-[node name="Target_Popup_30m" parent="." unique_id=1013983749 instance=ExtResource("21_target")]
-transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -52.30448, 0, 4)
-movement_type = 2
-
-[node name="Target_Civilian_Popup" parent="." unique_id=1705129992 instance=ExtResource("21_target")]
-transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -52.30448, 0, 1)
-target_type = 1
-movement_type = 2
-points_value = -200
-popup_duration = 3.5
-popup_hide_time = 2.5
-
-[node name="Target_Enemy_50m" parent="." unique_id=24175582 instance=ExtResource("21_target")]
-transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -72.30448, 0, 2.67)
+spawn_area_path = NodePath("../TargetSpawnArea")

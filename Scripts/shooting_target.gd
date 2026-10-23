@@ -23,6 +23,8 @@ signal target_hit(target: Node, bb: Node)
 signal alvo_atingido(alvo: Node, bb: Node)
 signal target_reset(target: Node)
 signal alvo_resetado(alvo: Node)
+signal target_despawned(target: Node)
+signal alvo_desapareceu(alvo: Node)
 
 @export_group("Target Specification (SRS 1.1)")
 @export var target_type: TargetType = TargetType.ENEMY:
@@ -61,6 +63,10 @@ signal alvo_resetado(alvo: Node)
 @export_group("Popup Settings (SRS 1.2)")
 @export var popup_duration: float = 3.0
 @export var popup_hide_time: float = 2.0
+
+@export_group("Despawn Lifetime (SRS 2.1 & 2.2)")
+@export var despawn_lifetime: float = 0.0
+var _lifetime_timer: float = 0.0
 
 # Internal state
 var _initial_position: Vector3 = Vector3.ZERO
@@ -212,6 +218,12 @@ func _physics_process(delta: float) -> void:
 			reset_target()
 		return
 
+	if is_active and despawn_lifetime > 0.0:
+		_lifetime_timer += delta
+		if _lifetime_timer >= despawn_lifetime:
+			despawn()
+			return
+
 	match movement_type:
 		MovementType.STATIC:
 			pass
@@ -326,11 +338,27 @@ func _apply_hit_color_feedback() -> void:
 		_material.emission_energy_multiplier = 1.5
 
 
+## Força o desaparecimento do alvo por tempo esgotado (Time Attack Hard / SRS 2.1 & 2.2)
+func despawn() -> void:
+	if not is_active:
+		return
+
+	is_active = false
+	_apply_knockdown(true)
+	target_despawned.emit(self)
+	alvo_desapareceu.emit(self)
+
+
+func sumir() -> void:
+	despawn()
+
+
 ## Restaura o alvo ao estado ativo erguido (SRS 1.1 e 1.3)
 func reset_target() -> void:
 	_is_respawning = false
 	_respawn_timer = 0.0
 	_popup_timer = 0.0
+	_lifetime_timer = 0.0
 	is_active = true
 
 	_apply_knockdown(false)

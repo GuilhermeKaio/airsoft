@@ -44,41 +44,41 @@ theme_override_font_sizes/font_size = 40
 text = "PAUSADO"
 horizontal_alignment = 1
 
-[node name="HSeparator" type="HSeparator" parent="PauseOverlay/CenterContainer/VBoxContainer"]
+[node name="HSeparator" type="HSeparator" parent="PauseOverlay/CenterContainer/VBoxContainer" unique_id=601116661]
 layout_mode = 2
 
-[node name="SettingsContainer" type="VBoxContainer" parent="PauseOverlay/CenterContainer/VBoxContainer"]
+[node name="SettingsContainer" type="VBoxContainer" parent="PauseOverlay/CenterContainer/VBoxContainer" unique_id=1221134112]
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="SettingsTitle" type="Label" parent="PauseOverlay/CenterContainer/VBoxContainer/SettingsContainer"]
+[node name="SettingsTitle" type="Label" parent="PauseOverlay/CenterContainer/VBoxContainer/SettingsContainer" unique_id=1626867317]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.85, 0.85, 0.85, 1)
 theme_override_font_sizes/font_size = 16
 text = "CONFIGURAÇÕES DE MIRA"
 horizontal_alignment = 1
 
-[node name="SensitivityRow" type="HBoxContainer" parent="PauseOverlay/CenterContainer/VBoxContainer/SettingsContainer"]
+[node name="SensitivityRow" type="HBoxContainer" parent="PauseOverlay/CenterContainer/VBoxContainer/SettingsContainer" unique_id=251761832]
 layout_mode = 2
 theme_override_constants/separation = 12
 alignment = 1
 
-[node name="SensitivityLabel" type="Label" parent="PauseOverlay/CenterContainer/VBoxContainer/SettingsContainer/SensitivityRow"]
+[node name="SensitivityLabel" type="Label" parent="PauseOverlay/CenterContainer/VBoxContainer/SettingsContainer/SensitivityRow" unique_id=1979129488]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 14
-text = "Sensibilidade (Valorant):"
+text = "Sensibilidade:"
 
-[node name="SensitivitySlider" type="HSlider" parent="PauseOverlay/CenterContainer/VBoxContainer/SettingsContainer/SensitivityRow"]
+[node name="SensitivitySlider" type="HSlider" parent="PauseOverlay/CenterContainer/VBoxContainer/SettingsContainer/SensitivityRow" unique_id=1215309131]
 custom_minimum_size = Vector2(140, 24)
 layout_mode = 2
 size_flags_vertical = 4
 min_value = 0.05
 max_value = 2.0
 step = 0.01
-value = 0.4
+value = 0.39999999999999997
 
-[node name="SensitivityLineEdit" type="LineEdit" parent="PauseOverlay/CenterContainer/VBoxContainer/SettingsContainer/SensitivityRow"]
+[node name="SensitivityLineEdit" type="LineEdit" parent="PauseOverlay/CenterContainer/VBoxContainer/SettingsContainer/SensitivityRow" unique_id=192540093]
 custom_minimum_size = Vector2(65, 30)
 layout_mode = 2
 size_flags_vertical = 4
@@ -86,35 +86,35 @@ text = "0.400"
 alignment = 1
 max_length = 6
 
-[node name="TrailsRow" type="HBoxContainer" parent="PauseOverlay/CenterContainer/VBoxContainer/SettingsContainer"]
+[node name="TrailsRow" type="HBoxContainer" parent="PauseOverlay/CenterContainer/VBoxContainer/SettingsContainer" unique_id=432441768]
 layout_mode = 2
 theme_override_constants/separation = 12
 alignment = 1
 
-[node name="TrailsLabel" type="Label" parent="PauseOverlay/CenterContainer/VBoxContainer/SettingsContainer/TrailsRow"]
+[node name="TrailsLabel" type="Label" parent="PauseOverlay/CenterContainer/VBoxContainer/SettingsContainer/TrailsRow" unique_id=1056389973]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 14
 text = "Trails das Balas:"
 
-[node name="BulletTrailsCheckBox" type="CheckBox" parent="PauseOverlay/CenterContainer/VBoxContainer/SettingsContainer/TrailsRow"]
+[node name="BulletTrailsCheckBox" type="CheckBox" parent="PauseOverlay/CenterContainer/VBoxContainer/SettingsContainer/TrailsRow" unique_id=1014613950]
 layout_mode = 2
 button_pressed = true
 text = "Ativado"
 
-[node name="HSeparator2" type="HSeparator" parent="PauseOverlay/CenterContainer/VBoxContainer"]
+[node name="HSeparator2" type="HSeparator" parent="PauseOverlay/CenterContainer/VBoxContainer" unique_id=1186169430]
 layout_mode = 2
 
-[node name="ButtonsContainer" type="VBoxContainer" parent="PauseOverlay/CenterContainer/VBoxContainer"]
+[node name="ButtonsContainer" type="VBoxContainer" parent="PauseOverlay/CenterContainer/VBoxContainer" unique_id=1374231706]
 layout_mode = 2
 theme_override_constants/separation = 8
 
-[node name="ResumeButton" type="Button" parent="PauseOverlay/CenterContainer/VBoxContainer/ButtonsContainer"]
+[node name="ResumeButton" type="Button" parent="PauseOverlay/CenterContainer/VBoxContainer/ButtonsContainer" unique_id=1836202791]
 custom_minimum_size = Vector2(0, 36)
 layout_mode = 2
 text = "Continuar"
 
-[node name="RestartButton" type="Button" parent="PauseOverlay/CenterContainer/VBoxContainer/ButtonsContainer"]
+[node name="RestartButton" type="Button" parent="PauseOverlay/CenterContainer/VBoxContainer/ButtonsContainer" unique_id=2130104870]
 custom_minimum_size = Vector2(0, 32)
 layout_mode = 2
 text = "Reiniciar Partida"

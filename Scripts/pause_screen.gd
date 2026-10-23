@@ -22,7 +22,7 @@ const SENSITIVITY_STEP: float = 0.01
 @onready var restart_button: Button = find_child("RestartButton", true, false)
 
 var current_sensitivity: float = DEFAULT_SENSITIVITY
-var bullet_trails_enabled: bool = true
+var bullet_trails_enabled: bool = false
 var _prev_mouse_mode: Input.MouseMode = Input.MOUSE_MODE_CAPTURED
 var _updating_ui: bool = false
 
@@ -290,10 +290,10 @@ func load_bullet_trails_setting() -> bool:
 	var config := ConfigFile.new()
 	var err := config.load(SETTINGS_PATH)
 	if err == OK:
-		var val = config.get_value("gameplay", "bullet_trails", true)
+		var val = config.get_value("gameplay", "bullet_trails", false)
 		if val is bool:
 			return val
-	return true
+	return false
 
 
 func save_sensitivity_setting(sens: float) -> void:
@@ -321,6 +321,13 @@ func _input(event: InputEvent) -> void:
 
 
 func toggle_pause() -> void:
+	if is_inside_tree() and get_tree():
+		var hud = get_tree().current_scene.find_child("ShootingGalleryHUD", true, false) if get_tree().current_scene else null
+		if hud and "summary_panel" in hud and hud.summary_panel and hud.summary_panel.visible:
+			if hud.has_method("_hide_summary"):
+				hud._hide_summary()
+			return
+
 	if is_inside_tree() and get_tree() and get_tree().paused:
 		resume_game()
 	else:

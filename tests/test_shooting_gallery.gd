@@ -289,7 +289,7 @@ func test_normative_signals_contract() -> void:
 
 	manager.alvo_atingido.connect(func(_alvo, _tipo, _pts, _mult): signals_fired["alvo_atingido"] = true)
 	manager.pontuacao_alterada.connect(func(_pontos, _delta): signals_fired["pontuacao_alterada"] = true)
-	manager.sessao_iniciada.connect(func(_tempo): signals_fired["sessao_iniciada"] = true)
+	manager.sessao_iniciada.connect(func(_tempo, _modo = 0): signals_fired["sessao_iniciada"] = true)
 	manager.sessao_encerrada.connect(func(_score, _acc, _h, _p): signals_fired["sessao_encerrada"] = true)
 	manager.combo_alterado.connect(func(_combo, _mult): signals_fired["combo_alterado"] = true)
 
