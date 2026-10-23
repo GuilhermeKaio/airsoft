@@ -318,6 +318,30 @@ func _initialize() -> void:
 			print("  [PASSED] %s" % m)
 			passed += 1
 
+	# 14. Ballistics Deflection, Aim & Dynamic Crosshair (SRS Adicionais Seção 7)
+	var ballistics_aim_test = load("res://tests/test_ballistics_and_aim.gd").new()
+	var ballistics_aim_methods = [
+		"test_kinematic_states_and_speed_thresholds",
+		"test_kinematic_spread_cone_angles",
+		"test_deadzoning_and_accuracy_threshold",
+		"test_counter_strafing_braking_and_smooth_interpolation",
+		"test_weapon_total_spread_formula",
+		"test_bb_ballistic_cone_deflection_calculation",
+		"test_dynamic_crosshair_reactivity",
+		"test_player_crosshair_signal_integration"
+	]
+
+	print("\n[Ballistics Deflection, Deadzoning & Dynamic Crosshair (SRS Adicionais Seção 7)]")
+	for m in ballistics_aim_methods:
+		ballistics_aim_test._reset()
+		ballistics_aim_test.call(m)
+		if ballistics_aim_test._failed:
+			print("  [FAILED] %s -> %s" % [m, ballistics_aim_test._message])
+			failed += 1
+		else:
+			print("  [PASSED] %s" % m)
+			passed += 1
+
 	print("\n==================================================")
 	print("--- TOTAL: %d passed, %d failed ---" % [passed, failed])
 	print("==================================================")

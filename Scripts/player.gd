@@ -6,10 +6,53 @@ signal slot_selected(slot_index: int)
 signal bullet_tracing_toggled(enabled: bool)
 signal tracing_balas_alternado(habilitado: bool)
 
+# Sinais de Dispersão Cinemática e Counter-Strafing (SRS Adicionais Seção 7)
+signal movement_spread_changed(current_spread_deg: float, state: int)
+signal dispersao_movimento_alterada(dispersao_graus: float, estado: int)
+signal kinematic_state_changed(new_state: int)
+signal estado_cinematico_alterado(novo_estado: int)
+signal accuracy_deadzone_entered()
+signal accuracy_deadzone_exited()
+
+enum KinematicState {
+	STATIONARY = 0,
+	WALKING = 1,
+	RUNNING = 2,
+	AIRBORNE = 3
+}
+
+enum EstadoCinematico {
+	ESTATICO = 0,
+	ANDANDO = 1,
+	CORRENDO = 2,
+	NO_AR = 3
+}
+
 @export var speed: float = 5.0
 @export var sprint_speed: float = 8.5
 @export var jump_velocity: float = 4.5
 @export var gravity: float = 9.8
+
+@export_group("Kinematic Spread & Deadzoning (SRS Adicionais Seção 7)")
+@export var walk_speed: float = 2.5
+@export var stationary_max_speed: float = 1.0
+@export var walking_max_speed: float = 3.0
+@export var deadzone_speed_ratio: float = 0.28 # 28% da velocidade de corrida (25% a 30% per SRS 7.2)
+@export var stationary_spread_deg: float = 0.0 # Erro adicional de movimento nulo quando parado
+@export var walking_spread_deg: float = 1.0 # 0.8° a 1.5°
+@export var running_spread_deg: float = 5.5 # 4.5° a 7.0°
+@export var airborne_spread_deg: float = 10.0 # 8.0° a 12.0°
+@export var spread_lerp_speed: float = 25.0
+@export var ground_acceleration: float = 40.0
+@export var ground_friction: float = 28.0
+@export var counter_strafe_multiplier: float = 2.5
+
+var current_movement_spread: float = 0.0
+var _last_emitted_spread: float = -999.0
+var _last_kinematic_state: int = -1
+var _was_in_deadzone: bool = false
+var _override_on_floor: bool = false
+var _forced_on_floor_value: bool = true
 
 @export_group("Inventory & Weapon Slots (SRS Seção 4 & 6)")
 @export var weapon: Node
@@ -272,6 +315,99 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 
 
+func is_player_on_floor() -> bool:
+	if _override_on_floor:
+		return _forced_on_floor_value
+	if is_inside_tree():
+		return is_on_floor()
+	return true
+
+
+func set_on_floor_override(on_floor: bool, active: bool = true) -> void:
+	_override_on_floor = active
+	_forced_on_floor_value = on_floor
+
+
+func get_horizontal_speed() -> float:
+	return Vector2(velocity.x, velocity.z).length()
+
+
+func get_deadzone_speed_threshold() -> float:
+	return speed * deadzone_speed_ratio
+
+
+func is_in_accuracy_deadzone() -> bool:
+	if not is_player_on_floor():
+		return false
+	return get_horizontal_speed() <= get_deadzone_speed_threshold()
+
+
+func get_kinematic_state() -> KinematicState:
+	if not is_player_on_floor():
+		return KinematicState.AIRBORNE
+	var v_h := get_horizontal_speed()
+	if v_h <= stationary_max_speed or is_in_accuracy_deadzone():
+		return KinematicState.STATIONARY
+	elif v_h <= walking_max_speed:
+		return KinematicState.WALKING
+	else:
+		return KinematicState.RUNNING
+
+
+func get_target_movement_spread(state: int = -1, v_h: float = -1.0) -> float:
+	if state < 0:
+		state = int(get_kinematic_state())
+	if v_h < 0.0:
+		v_h = get_horizontal_speed()
+
+	match state:
+		KinematicState.STATIONARY:
+			return stationary_spread_deg
+		KinematicState.WALKING:
+			var t := clampf((v_h - stationary_max_speed) / maxf(walking_max_speed - stationary_max_speed, 0.001), 0.0, 1.0)
+			return lerpf(0.8, 1.5, t)
+		KinematicState.RUNNING:
+			var t := clampf((v_h - walking_max_speed) / maxf(speed - walking_max_speed, 0.001), 0.0, 1.0)
+			return lerpf(4.5, 7.0, t)
+		KinematicState.AIRBORNE:
+			return airborne_spread_deg
+		_:
+			return 0.0
+
+
+func get_movement_spread() -> float:
+	return current_movement_spread
+
+
+func set_movement_spread(value: float) -> void:
+	current_movement_spread = value
+
+
+func update_movement_spread(delta: float) -> void:
+	var state := get_kinematic_state()
+	var in_deadzone := is_in_accuracy_deadzone()
+
+	if in_deadzone != _was_in_deadzone:
+		_was_in_deadzone = in_deadzone
+		if in_deadzone:
+			accuracy_deadzone_entered.emit()
+		else:
+			accuracy_deadzone_exited.emit()
+
+	var target_spread := get_target_movement_spread(int(state))
+	current_movement_spread = move_toward(current_movement_spread, target_spread, spread_lerp_speed * delta)
+
+	if int(state) != _last_kinematic_state:
+		_last_kinematic_state = int(state)
+		kinematic_state_changed.emit(int(state))
+		estado_cinematico_alterado.emit(int(state))
+
+	if absf(current_movement_spread - _last_emitted_spread) > 0.005:
+		_last_emitted_spread = current_movement_spread
+		movement_spread_changed.emit(current_movement_spread, int(state))
+		dispersao_movimento_alterada.emit(current_movement_spread, int(state))
+
+
 func _physics_process(delta: float) -> void:
 	if not is_on_floor():
 		velocity.y -= gravity * delta
@@ -299,9 +435,23 @@ func _physics_process(delta: float) -> void:
 		if direction.length() > 0.0:
 			direction = direction.normalized()
 
-	var current_speed := speed if Input.is_action_pressed("sprint") else sprint_speed
+	# Andando (Shift): 1.0 m/s < v_h <= 3.0 m/s. Correndo: v_h > 3.0 m/s
+	var is_walking := Input.is_action_pressed("sprint")
+	var target_speed := walk_speed if is_walking else speed
 
-	velocity.x = direction.x * current_speed
-	velocity.z = direction.z * current_speed
+	var cur_h_vel := Vector2(velocity.x, velocity.z)
+	if direction.length_squared() > 0.0:
+		var wish_h_vel := Vector2(direction.x, direction.z) * target_speed
+		# Detecção de Counter-Strafing: frenagem ativa contra inércia oposta
+		var is_counter_strafing := cur_h_vel.length_squared() > 0.1 and cur_h_vel.normalized().dot(wish_h_vel.normalized()) < -0.1
+		var accel := ground_acceleration * (counter_strafe_multiplier if is_counter_strafing else 1.0)
+		cur_h_vel = cur_h_vel.move_toward(wish_h_vel, accel * delta)
+	else:
+		# Sem input direcional: atrito desacelera até a zona morta (deadzone)
+		cur_h_vel = cur_h_vel.move_toward(Vector2.ZERO, ground_friction * delta)
+
+	velocity.x = cur_h_vel.x
+	velocity.z = cur_h_vel.y
 
 	move_and_slide()
+	update_movement_spread(delta)

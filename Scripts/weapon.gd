@@ -38,6 +38,11 @@ signal recuo_recuperado()
 @export var recoil_recovery_time: float = 0.25
 @export var player_node: Node
 
+@export_group("Kinematic Spread & Ballistics (SRS Adicionais Seção 7)")
+@export var base_spread_deg: float = 0.1 # theta_arma_base (0.05° a 0.15°)
+@export var recoil_spread_factor: float = 0.15 # theta_recoil adicional por bala contínua
+@export var current_movement_spread_deg: float = 0.0 # theta_movimento (quando sem player)
+
 var recovery_speed: float:
 	get:
 		return 1.0 / maxf(recoil_recovery_time, 0.001)
@@ -583,6 +588,8 @@ func configure_weapon_preset(model: WeaponModel) -> void:
 			gear_ratio_n = 30.0
 			projectiles_per_shot = 3
 			spread_cone_angle = 0.05
+			base_spread_deg = 2.86 # rad_to_deg(0.05)
+			recoil_spread_factor = 0.20
 			allowed_fire_modes = [FireMode.SEMI]
 			fire_mode = FireMode.SEMI
 			recoil_vertical_bullets = 1
@@ -600,6 +607,8 @@ func configure_weapon_preset(model: WeaponModel) -> void:
 			gear_ratio_n = 30.0
 			projectiles_per_shot = 1
 			spread_cone_angle = 0.0
+			base_spread_deg = 0.08 # 0.05° a 0.15° (SRS 7.1)
+			recoil_spread_factor = 0.12
 			allowed_fire_modes = [FireMode.SEMI, FireMode.AUTO]
 			spin_rad_s = 1300.0
 			recoil_vertical_bullets = 5
@@ -617,6 +626,8 @@ func configure_weapon_preset(model: WeaponModel) -> void:
 			gear_ratio_n = 30.0
 			projectiles_per_shot = 1
 			spread_cone_angle = 0.0
+			base_spread_deg = 0.10 # 0.05° a 0.15° (SRS 7.1)
+			recoil_spread_factor = 0.15
 			allowed_fire_modes = [FireMode.SEMI]
 			fire_mode = FireMode.SEMI
 			recoil_vertical_bullets = 1
@@ -634,6 +645,8 @@ func configure_weapon_preset(model: WeaponModel) -> void:
 			gear_ratio_n = 30.0
 			projectiles_per_shot = 1
 			spread_cone_angle = 0.0
+			base_spread_deg = 0.12 # 0.05° a 0.15° (SRS 7.1)
+			recoil_spread_factor = 0.18
 			allowed_fire_modes = [FireMode.SEMI, FireMode.AUTO]
 			_update_glock_recoil_preset()
 			weapon_prefab = load("res://Scenes/pistolGlock.tscn")
@@ -722,16 +735,19 @@ func fire() -> void:
 		if "mass" in bullet:
 			bullet.mass = bb_mass_kg
 
-		var fire_direction := base_fire_dir
-		if (count_to_fire > 1 or spread_cone_angle > 0.0) and spread_cone_angle > 0.0:
-			var angle_x = randf_range(-spread_cone_angle, spread_cone_angle)
-			var angle_y = randf_range(-spread_cone_angle, spread_cone_angle)
-			fire_direction = (Basis(spin_axis, angle_y) * Basis(perp_axis, angle_x) * base_fire_dir).normalized()
+		# Deflexão Cônica Balística da BB (SRS Adicionais Seção 7.3)
+		var total_spread_rad := get_total_spread_rad()
+		var fire_direction := calculate_deflected_direction(base_fire_dir, total_spread_rad)
 
 		if "linear_velocity" in bullet:
 			bullet.linear_velocity = fire_direction * velocity_ms
+
+		var bullet_spin_axis := fire_direction.cross(Vector3.UP).normalized()
+		if bullet_spin_axis.length_squared() < 0.001:
+			bullet_spin_axis = Vector3.RIGHT
+
 		if "angular_velocity" in bullet:
-			bullet.angular_velocity = spin_axis * spin_rad_s
+			bullet.angular_velocity = bullet_spin_axis * spin_rad_s
 
 	_play_fire_animation()
 	_apply_recoil()
@@ -778,6 +794,44 @@ func _update_glock_recoil_preset() -> void:
 		recoil_vertical_pitch = 0.8
 		recoil_lateral_yaw = 0.15
 		recoil_recovery_time = 0.15
+
+
+func get_movement_spread_deg() -> float:
+	var p := _get_player_node()
+	if p != null and p.has_method("get_movement_spread"):
+		return p.get_movement_spread()
+	return current_movement_spread_deg
+
+
+func get_total_spread_deg() -> float:
+	var theta_base := base_spread_deg
+	if spread_cone_angle > 0.0:
+		theta_base = maxf(theta_base, rad_to_deg(spread_cone_angle))
+	var theta_recoil := recoil_shot_index * recoil_spread_factor
+	var theta_movimento := get_movement_spread_deg()
+	return theta_base + theta_recoil + theta_movimento
+
+
+func get_total_spread_rad() -> float:
+	return deg_to_rad(get_total_spread_deg())
+
+
+static func calculate_deflected_direction(muzzle_forward: Vector3, total_spread_rad: float) -> Vector3:
+	if total_spread_rad <= 0.00001:
+		return muzzle_forward.normalized()
+
+	var forward := muzzle_forward.normalized()
+	var perp: Vector3
+	if absf(forward.y) < 0.99:
+		perp = forward.cross(Vector3.UP).normalized()
+	else:
+		perp = forward.cross(Vector3.RIGHT).normalized()
+
+	var random_axial_angle: float = randf_range(0.0, TAU)
+	var random_axis: Vector3 = perp.rotated(forward, random_axial_angle).normalized()
+
+	var deflection_angle: float = randf_range(0.0, total_spread_rad)
+	return forward.rotated(random_axis, deflection_angle).normalized()
 
 
 func _get_player_node() -> Node:
