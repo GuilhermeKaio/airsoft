@@ -230,6 +230,29 @@ func _initialize() -> void:
 			print("  [PASSED] %s" % m)
 			passed += 1
 
+	# 10. Bullet Tracing & Ctrl+T Shortcut
+	var tracing_test = load("res://tests/test_bullet_tracing.gd").new()
+	var tracing_methods = [
+		"test_bb_global_trail_state_and_toggle",
+		"test_in_flight_bullet_trail_disabling",
+		"test_weapon_bullet_tracing_integration",
+		"test_player_tracing_api_and_signals",
+		"test_player_shortcut_ctrl_t_input",
+		"test_main_shortcut_ctrl_t_input",
+		"test_hud_notification_on_tracing_toggled"
+	]
+
+	print("\n[Bullet Tracing & Ctrl+T Shortcut]")
+	for m in tracing_methods:
+		tracing_test._reset()
+		tracing_test.call(m)
+		if tracing_test._failed:
+			print("  [FAILED] %s -> %s" % [m, tracing_test._message])
+			failed += 1
+		else:
+			print("  [PASSED] %s" % m)
+			passed += 1
+
 	print("\n==================================================")
 	print("--- TOTAL: %d passed, %d failed ---" % [passed, failed])
 	print("==================================================")

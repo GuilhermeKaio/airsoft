@@ -64,6 +64,7 @@ var simplified_energy_joules: float:
 @export var min_hop_up: float = 0.0
 @export var max_hop_up: float = 2500.0
 @export var hop_up_step: float = 50.0
+@export var bullet_tracing_enabled: bool = true
 
 const METERS_TO_FEET: float = 3.28084
 
@@ -350,6 +351,19 @@ func adjust_hop_up(delta_value: float) -> void:
 	hop_up_adjusted.emit(spin_rad_s)
 	hop_up_ajustado.emit(spin_rad_s)
 	print("Hop-up adjusted to: ", spin_rad_s, " rad/s")
+
+
+func set_bullet_tracing(enabled: bool) -> void:
+	bullet_tracing_enabled = enabled
+
+
+func toggle_bullet_tracing() -> bool:
+	bullet_tracing_enabled = not bullet_tracing_enabled
+	return bullet_tracing_enabled
+
+
+func is_bullet_tracing_enabled() -> bool:
+	return bullet_tracing_enabled
 
 
 func trigger_incompatible_magazine() -> void:
@@ -649,6 +663,10 @@ func fire() -> void:
 
 	for i in range(count_to_fire):
 		var bullet = bb_scene.instantiate()
+		if "trail_enabled" in bullet:
+			var BBClass = load("res://Scripts/bb.gd")
+			var global_tr: bool = BBClass.global_trail_enabled if (BBClass != null and "global_trail_enabled" in BBClass) else true
+			bullet.trail_enabled = bullet_tracing_enabled and global_tr
 		if spawn_parent:
 			spawn_parent.add_child(bullet)
 		

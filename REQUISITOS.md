@@ -75,6 +75,7 @@ sequenceDiagram
   - `alternar_modo_tiro()`: comando para ciclar entre `SEMI` e `AUTO`.
   - `recarregar()`: comando de inserção/troca de carregador.
   - `ajustar_hop_up(delta: float)`: comando para aumentar ou diminuir a pressão do bucking.
+  - `toggle_bullet_tracing()` / `alternar_tracing_balas()`: atalho `Ctrl + T` (ação `toggle_bullet_tracing`) para habilitar/desabilitar o traçado (tracing/trail) visual dos projéteis. Emite sinal reativo para o HUD exibindo a notificação de estado (`TRACING: DESATIVADO` / `TRACING: ATIVADO`).
 
 ---
 
@@ -251,6 +252,7 @@ O HUD deve exibir permanentemente:
      - Integrada diretamente pela simulação física do Godot Engine.
 - **Rastro e Colisão**:
   - Renderização de rastro contínuo (`ImmediateMesh`).
+  - Controle dinâmico global e por projétil (`Ctrl + T`) para ligar/desligar a renderização do traçado.
   - Desativação do rastro e remoção/pool de instâncias após colisão ou tempo limite de voo.
 
 ---

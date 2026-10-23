@@ -6,6 +6,25 @@ const CROSS_SECTIONAL_AREA = PI * (RADIUS * RADIUS)
 
 const GROUP_PROJECTILE := "bb_projectile"
 const GROUP_PROJETIL := GROUP_PROJECTILE
+
+static var global_trail_enabled: bool = true
+
+static func set_global_trail_enabled(enabled: bool, tree: SceneTree = null) -> void:
+	global_trail_enabled = enabled
+	if tree != null:
+		for node in tree.get_nodes_in_group(GROUP_PROJECTILE):
+			if node.has_method("set_trail_enabled"):
+				node.set_trail_enabled(enabled)
+			elif "trail_enabled" in node:
+				node.trail_enabled = enabled
+
+static func toggle_global_trail_enabled(tree: SceneTree = null) -> bool:
+	set_global_trail_enabled(not global_trail_enabled, tree)
+	return global_trail_enabled
+
+static func is_global_trail_enabled() -> bool:
+	return global_trail_enabled
+
 var hit_ground: bool = false
 var _trail_recording: bool = true
 
@@ -37,8 +56,30 @@ func _ready() -> void:
 	max_contacts_reported = 4
 	body_entered.connect(_on_body_entered)
 
+	if not global_trail_enabled:
+		trail_enabled = false
+
 	if trail_enabled:
 		_setup_trail()
+
+
+func set_trail_enabled(enabled: bool) -> void:
+	trail_enabled = enabled
+	_trail_recording = enabled and not hit_ground
+	if not enabled:
+		if _trail_immediate:
+			_trail_immediate.clear_surfaces()
+		_trail_points.clear()
+		if _trail_mesh_instance:
+			_trail_mesh_instance.visible = false
+	else:
+		if _trail_mesh_instance == null:
+			_setup_trail()
+		else:
+			_trail_mesh_instance.visible = true
+	var bullet_trail_particles = get_node_or_null("BulletTrail")
+	if bullet_trail_particles and bullet_trail_particles is GPUParticles3D:
+		bullet_trail_particles.emitting = enabled
 
 
 func _on_body_entered(body: Node) -> void:
@@ -102,7 +143,8 @@ func _setup_trail() -> void:
 
 
 func _record_trail_point() -> void:
-	_trail_points.append({"pos": global_position, "age": 0.0})
+	var pos: Vector3 = global_position if is_inside_tree() else position
+	_trail_points.append({"pos": pos, "age": 0.0})
 	while _trail_points.size() > trail_max_points:
 		_trail_points.remove_at(0)
 

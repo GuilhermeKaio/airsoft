@@ -3,6 +3,8 @@ extends CharacterBody3D
 signal weapon_swapped(new_weapon: Node, slot_index: int)
 signal arma_trocada(nova_arma: Node, slot_index: int)
 signal slot_selected(slot_index: int)
+signal bullet_tracing_toggled(enabled: bool)
+signal tracing_balas_alternado(habilitado: bool)
 
 @export var speed: float = 5.0
 @export var sprint_speed: float = 8.5
@@ -162,8 +164,49 @@ func _get_hop_up_step() -> float:
 	return 50.0
 
 
+var bullet_tracing_enabled: bool = true
+
+
+func toggle_bullet_tracing() -> bool:
+	bullet_tracing_enabled = not bullet_tracing_enabled
+	_apply_bullet_tracing(bullet_tracing_enabled)
+	bullet_tracing_toggled.emit(bullet_tracing_enabled)
+	tracing_balas_alternado.emit(bullet_tracing_enabled)
+	return bullet_tracing_enabled
+
+
+func set_bullet_tracing(enabled: bool) -> void:
+	bullet_tracing_enabled = enabled
+	_apply_bullet_tracing(bullet_tracing_enabled)
+	bullet_tracing_toggled.emit(bullet_tracing_enabled)
+	tracing_balas_alternado.emit(bullet_tracing_enabled)
+
+
+func is_bullet_tracing_enabled() -> bool:
+	return bullet_tracing_enabled
+
+
+func _apply_bullet_tracing(enabled: bool) -> void:
+	var BBClass = load("res://Scripts/bb.gd")
+	if BBClass and "set_global_trail_enabled" in BBClass:
+		BBClass.set_global_trail_enabled(enabled, get_tree() if is_inside_tree() else null)
+	if weapon_slot_1 and weapon_slot_1.has_method("set_bullet_tracing"):
+		weapon_slot_1.set_bullet_tracing(enabled)
+	if weapon_slot_2 and weapon_slot_2.has_method("set_bullet_tracing"):
+		weapon_slot_2.set_bullet_tracing(enabled)
+	var active_w = get_weapon()
+	if active_w and active_w.has_method("set_bullet_tracing"):
+		active_w.set_bullet_tracing(enabled)
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	var is_ctrl: bool = ("ctrl_pressed" in event and event.ctrl_pressed)
+	if event.is_action_pressed("toggle_bullet_tracing") or (is_ctrl and event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_T):
+		toggle_bullet_tracing()
+		if is_inside_tree() and get_viewport():
+			get_viewport().set_input_as_handled()
+		return
+
 	if not is_ctrl and (event.is_action_pressed("weapon_slot_1") or (event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_1)):
 		select_slot(1)
 		if is_inside_tree() and get_viewport():

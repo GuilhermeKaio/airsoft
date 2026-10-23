@@ -6,7 +6,7 @@ extends Label
 
 @onready var camera3: Camera3D = get_node_or_null(camera_path)
 @onready var weapon: Node = get_node_or_null(weapon_path)
-@onready var player: Node = get_node_or_null(player_path)
+var player: Node = null
 
 var current_ammo: int = 0
 var magazine_capacity: int = 0
@@ -33,11 +33,10 @@ func _ready() -> void:
 	add_theme_constant_override("shadow_offset_x", 2)
 	add_theme_constant_override("shadow_offset_y", 2)
 
+	if player == null and is_inside_tree():
+		player = get_node_or_null(player_path)
 	if player:
-		if player.has_signal("weapon_swapped") and not player.weapon_swapped.is_connected(_on_player_weapon_swapped):
-			player.weapon_swapped.connect(_on_player_weapon_swapped)
-		elif player.has_signal("arma_trocada") and not player.arma_trocada.is_connected(_on_player_weapon_swapped):
-			player.arma_trocada.connect(_on_player_weapon_swapped)
+		setup_player(player)
 
 	if weapon:
 		setup(weapon)
@@ -45,6 +44,32 @@ func _ready() -> void:
 		var pw = player.get_weapon()
 		if pw:
 			setup(pw)
+
+
+func setup_player(target_player: Node) -> void:
+	if player and player != target_player:
+		_disconnect_player(player)
+	player = target_player
+	if player:
+		if player.has_signal("weapon_swapped") and not player.weapon_swapped.is_connected(_on_player_weapon_swapped):
+			player.weapon_swapped.connect(_on_player_weapon_swapped)
+		elif player.has_signal("arma_trocada") and not player.arma_trocada.is_connected(_on_player_weapon_swapped):
+			player.arma_trocada.connect(_on_player_weapon_swapped)
+		if player.has_signal("bullet_tracing_toggled") and not player.bullet_tracing_toggled.is_connected(_on_bullet_tracing_toggled):
+			player.bullet_tracing_toggled.connect(_on_bullet_tracing_toggled)
+		elif player.has_signal("tracing_balas_alternado") and not player.tracing_balas_alternado.is_connected(_on_bullet_tracing_toggled):
+			player.tracing_balas_alternado.connect(_on_bullet_tracing_toggled)
+
+
+func _disconnect_player(p: Node) -> void:
+	if p.has_signal("weapon_swapped") and p.weapon_swapped.is_connected(_on_player_weapon_swapped):
+		p.weapon_swapped.disconnect(_on_player_weapon_swapped)
+	if p.has_signal("arma_trocada") and p.arma_trocada.is_connected(_on_player_weapon_swapped):
+		p.arma_trocada.disconnect(_on_player_weapon_swapped)
+	if p.has_signal("bullet_tracing_toggled") and p.bullet_tracing_toggled.is_connected(_on_bullet_tracing_toggled):
+		p.bullet_tracing_toggled.disconnect(_on_bullet_tracing_toggled)
+	if p.has_signal("tracing_balas_alternado") and p.tracing_balas_alternado.is_connected(_on_bullet_tracing_toggled):
+		p.tracing_balas_alternado.disconnect(_on_bullet_tracing_toggled)
 
 
 func _on_player_weapon_swapped(new_weapon: Node, _slot_index: int = 0) -> void:
@@ -147,6 +172,11 @@ func _on_magazine_equipped(mag: Resource) -> void:
 
 func _on_incompatible_magazine() -> void:
 	_show_notification("CARREGADOR INCOMPATÍVEL")
+
+
+func _on_bullet_tracing_toggled(enabled: bool) -> void:
+	var msg = "TRACING: ATIVADO" if enabled else "TRACING: DESATIVADO"
+	_show_notification(msg)
 
 
 func _show_notification(msg: String, duration: float = 1.5) -> void:
