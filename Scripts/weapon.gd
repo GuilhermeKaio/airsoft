@@ -25,6 +25,30 @@ signal carregador_incompativel()
 signal magazine_equipped(magazine: Magazine)
 signal cadencia_alterada(novo_rof: float, novo_intervalo: float)
 signal mola_ajustada(nova_energia: float)
+signal recoil_applied(pitch_deg: float, yaw_deg: float, shot_index: int)
+signal recuo_aplicado(pitch_deg: float, yaw_deg: float, shot_index: int)
+signal recoil_recovered()
+signal recuo_recuperado()
+
+@export_group("Recoil & Spray Pattern (SRS Adicionais Seção 3)")
+@export var recoil_enabled: bool = true
+@export var recoil_vertical_bullets: int = 5
+@export var recoil_vertical_pitch: float = 1.2
+@export var recoil_lateral_yaw: float = 0.9
+@export var recoil_recovery_time: float = 0.25
+@export var player_node: Node
+
+var recovery_speed: float:
+	get:
+		return 1.0 / maxf(recoil_recovery_time, 0.001)
+	set(value):
+		if value > 0.0:
+			recoil_recovery_time = 1.0 / value
+
+var recoil_shot_index: int = 0
+var current_recoil_offset: Vector2 = Vector2.ZERO # x: yaw, y: pitch (degrees)
+var time_since_last_shot: float = 0.0
+var _is_recoil_recovering: bool = false
 
 @export_group("Weapon Identity & Models (SRS 3.2 & 4)")
 @export var weapon_model: WeaponModel = WeaponModel.PISTOL_GLOCK
@@ -256,6 +280,8 @@ func _process(delta: float) -> void:
 		else:
 			transform = new_trans
 
+	_process_recoil(delta)
+
 	if is_reloading:
 		_reload_timer -= delta
 		if _reload_timer <= 0.0:
@@ -340,6 +366,7 @@ func toggle_fire_mode() -> void:
 	fire_mode = next_mode
 	if weapon_model == WeaponModel.PISTOL_GLOCK:
 		motor_rpm = 33000.0 if fire_mode == FireMode.AUTO else 12000.0
+		_update_glock_recoil_preset()
 	var mode_name := "AUTO" if fire_mode == FireMode.AUTO else "SEMI"
 	print("Fire mode: ", mode_name)
 	fire_mode_changed.emit(mode_name)
@@ -558,6 +585,10 @@ func configure_weapon_preset(model: WeaponModel) -> void:
 			spread_cone_angle = 0.05
 			allowed_fire_modes = [FireMode.SEMI]
 			fire_mode = FireMode.SEMI
+			recoil_vertical_bullets = 1
+			recoil_vertical_pitch = 3.5
+			recoil_lateral_yaw = 0.8
+			recoil_recovery_time = 0.40
 			weapon_prefab = load("res://Scenes/shotgun.tscn")
 		WeaponModel.RIFLE:
 			first_person_offset = Vector3(0.22, -0.25, -0.42)
@@ -571,6 +602,10 @@ func configure_weapon_preset(model: WeaponModel) -> void:
 			spread_cone_angle = 0.0
 			allowed_fire_modes = [FireMode.SEMI, FireMode.AUTO]
 			spin_rad_s = 1300.0
+			recoil_vertical_bullets = 5
+			recoil_vertical_pitch = 1.2
+			recoil_lateral_yaw = 0.9
+			recoil_recovery_time = 0.25
 			weapon_prefab = load("res://Scenes/rifle.tscn")
 		WeaponModel.PISTOL_1911:
 			first_person_offset = Vector3(0.20, -0.2, -0.4)
@@ -584,6 +619,10 @@ func configure_weapon_preset(model: WeaponModel) -> void:
 			spread_cone_angle = 0.0
 			allowed_fire_modes = [FireMode.SEMI]
 			fire_mode = FireMode.SEMI
+			recoil_vertical_bullets = 1
+			recoil_vertical_pitch = 2.2
+			recoil_lateral_yaw = 0.1
+			recoil_recovery_time = 0.22
 			weapon_prefab = load("res://Scenes/pistol1911.tscn")
 		WeaponModel.PISTOL_GLOCK:
 			first_person_offset = Vector3(0.20, -0.2, -0.45)
@@ -596,6 +635,7 @@ func configure_weapon_preset(model: WeaponModel) -> void:
 			projectiles_per_shot = 1
 			spread_cone_angle = 0.0
 			allowed_fire_modes = [FireMode.SEMI, FireMode.AUTO]
+			_update_glock_recoil_preset()
 			weapon_prefab = load("res://Scenes/pistolGlock.tscn")
 	_update_cadence()
 
@@ -670,6 +710,14 @@ func fire() -> void:
 		if spawn_parent:
 			spawn_parent.add_child(bullet)
 		
+		# Physics collision isolation & runtime collision exception (SRS Adicionais Seção 5)
+		if bullet is CollisionObject3D:
+			bullet.collision_layer = 8
+			bullet.collision_mask = 17
+			var player_target := _get_player_node()
+			if player_target and player_target is CollisionObject3D:
+				bullet.add_collision_exception_with(player_target)
+		
 		bullet.global_transform = muzzle_transform
 		if "mass" in bullet:
 			bullet.mass = bb_mass_kg
@@ -686,6 +734,7 @@ func fire() -> void:
 			bullet.angular_velocity = spin_axis * spin_rad_s
 
 	_play_fire_animation()
+	_apply_recoil()
 
 
 func _play_fire_animation() -> void:
@@ -716,3 +765,141 @@ func _emit_initial_state() -> void:
 	hop_up_ajustado.emit(spin_rad_s)
 	cadencia_alterada.emit(rof, fire_interval)
 	mola_ajustada.emit(energy_joules)
+
+
+func _update_glock_recoil_preset() -> void:
+	if fire_mode == FireMode.AUTO:
+		recoil_vertical_bullets = 4
+		recoil_vertical_pitch = 1.6
+		recoil_lateral_yaw = 1.3
+		recoil_recovery_time = 0.20
+	else:
+		recoil_vertical_bullets = 1
+		recoil_vertical_pitch = 0.8
+		recoil_lateral_yaw = 0.15
+		recoil_recovery_time = 0.15
+
+
+func _get_player_node() -> Node:
+	if player_node != null and is_instance_valid(player_node):
+		return player_node
+	var p := get_parent()
+	while p != null:
+		if p is CharacterBody3D or p.is_in_group("player") or p.name == "Player":
+			return p
+		p = p.get_parent()
+	if is_inside_tree() and get_tree() and get_tree().current_scene:
+		var scene_player := get_tree().current_scene.find_child("Player", true, false)
+		if scene_player:
+			return scene_player
+	return null
+
+
+func get_recoil_step(shot_index: int) -> Vector2:
+	match weapon_model:
+		WeaponModel.RIFLE:
+			if shot_index < recoil_vertical_bullets:
+				return Vector2(0.0, recoil_vertical_pitch)
+			elif shot_index == recoil_vertical_bullets:
+				return Vector2(recoil_lateral_yaw, recoil_vertical_pitch * 0.3)
+			else:
+				var cycle := (shot_index - recoil_vertical_bullets - 1) % 6
+				var dir := 1.0 if cycle < 3 else -1.0
+				return Vector2(dir * recoil_lateral_yaw, 0.0)
+		WeaponModel.PISTOL_GLOCK:
+			if fire_mode == FireMode.AUTO:
+				if shot_index < recoil_vertical_bullets:
+					return Vector2(0.0, recoil_vertical_pitch)
+				else:
+					var sign_dir := 1.0 if (((shot_index - recoil_vertical_bullets) / 2) % 2 == 0) else -1.0
+					return Vector2(sign_dir * recoil_lateral_yaw, 0.2)
+			else:
+				return Vector2(randf_range(-recoil_lateral_yaw, recoil_lateral_yaw), recoil_vertical_pitch)
+		WeaponModel.PISTOL_1911:
+			return Vector2(randf_range(-recoil_lateral_yaw, recoil_lateral_yaw), recoil_vertical_pitch)
+		WeaponModel.SHOTGUN:
+			return Vector2(randf_range(-recoil_lateral_yaw, recoil_lateral_yaw), recoil_vertical_pitch)
+		_:
+			if shot_index < recoil_vertical_bullets:
+				return Vector2(0.0, recoil_vertical_pitch)
+			return Vector2(recoil_lateral_yaw, 0.0)
+
+
+func get_current_recoil_step() -> Vector2:
+	return get_recoil_step(recoil_shot_index)
+
+
+func get_current_recoil_offset() -> Vector2:
+	return current_recoil_offset
+
+
+func reset_recoil() -> void:
+	recoil_shot_index = 0
+	current_recoil_offset = Vector2.ZERO
+	time_since_last_shot = 0.0
+	_is_recoil_recovering = false
+	var cam := _get_target_camera()
+	if cam and cam.has_method("reset_recoil"):
+		cam.reset_recoil()
+
+
+func is_recoil_recovering() -> bool:
+	return _is_recoil_recovering
+
+
+func _apply_recoil() -> void:
+	if not recoil_enabled:
+		return
+	var step := get_recoil_step(recoil_shot_index)
+	recoil_shot_index += 1
+	current_recoil_offset += step
+	time_since_last_shot = 0.0
+	_is_recoil_recovering = false
+
+	var cam := _get_target_camera()
+	if cam and cam.has_method("apply_recoil"):
+		cam.apply_recoil(step.y, step.x)
+	elif cam:
+		cam.rotation.x = clamp(cam.rotation.x + deg_to_rad(step.y), deg_to_rad(-89.0), deg_to_rad(89.0))
+		cam.rotate_y(-deg_to_rad(step.x))
+
+	recoil_applied.emit(step.y, step.x, recoil_shot_index)
+	recuo_aplicado.emit(step.y, step.x, recoil_shot_index)
+
+
+func _process_recoil(delta: float) -> void:
+	if not recoil_enabled:
+		return
+
+	time_since_last_shot += delta
+
+	# Recoil recovery triggers when trigger is not shooting (elapsed fire_interval)
+	var cadence_interval := get_fire_interval()
+	if time_since_last_shot >= cadence_interval and current_recoil_offset != Vector2.ZERO:
+		_is_recoil_recovering = true
+		var rec_time := maxf(recoil_recovery_time, 0.01)
+		var decay_rate := delta / rec_time
+		var old_offset := current_recoil_offset
+
+		current_recoil_offset.x = move_toward(current_recoil_offset.x, 0.0, maxf(abs(old_offset.x) * decay_rate, delta * 3.0))
+		current_recoil_offset.y = move_toward(current_recoil_offset.y, 0.0, maxf(abs(old_offset.y) * decay_rate, delta * 3.0))
+
+		var delta_pitch := old_offset.y - current_recoil_offset.y
+		var delta_yaw := old_offset.x - current_recoil_offset.x
+
+		var cam := _get_target_camera()
+		if cam and cam.has_method("recover_recoil"):
+			cam.recover_recoil(deg_to_rad(delta_pitch), deg_to_rad(delta_yaw))
+		elif cam:
+			cam.rotation.x = clamp(cam.rotation.x - deg_to_rad(delta_pitch), deg_to_rad(-89.0), deg_to_rad(89.0))
+			cam.rotate_y(deg_to_rad(delta_yaw))
+
+	# Recoil counter reset (SRS 3.3):
+	# If time_since_last_shot >= recoil_recovery_time, spray counter resets to 0.
+	# If the player fires before this time, recoil_shot_index continues accumulating.
+	if time_since_last_shot >= recoil_recovery_time:
+		recoil_shot_index = 0
+		if current_recoil_offset == Vector2.ZERO and _is_recoil_recovering:
+			_is_recoil_recovering = false
+			recoil_recovered.emit()
+			recuo_recuperado.emit()

@@ -47,6 +47,10 @@ func _ready() -> void:
 
 
 func _setup_collision() -> void:
+	if collision_layer == 1 and collision_mask == 1:
+		collision_layer = 32
+		collision_mask = 2
+
 	if collision_shape == null:
 		collision_shape = CollisionShape3D.new()
 		collision_shape.name = "CollisionShape3D"

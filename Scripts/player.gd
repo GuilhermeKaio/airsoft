@@ -21,6 +21,11 @@ signal tracing_balas_alternado(habilitado: bool)
 
 
 func _ready() -> void:
+	add_to_group("player")
+	if collision_layer == 1 and collision_mask == 1:
+		collision_layer = 2
+		collision_mask = 1
+
 	if weapon_slot_1 == null:
 		weapon_slot_1 = get_node_or_null("WeaponSlot1")
 		if weapon_slot_1 == null:
@@ -99,6 +104,8 @@ func select_slot(slot_index: int, force: bool = false) -> bool:
 
 	var previous_weapon: Node = get_weapon()
 	if previous_weapon != null and previous_weapon != target_weapon:
+		if previous_weapon.has_method("reset_recoil"):
+			previous_weapon.reset_recoil()
 		if previous_weapon.has_method("atirar"):
 			previous_weapon.atirar(false)
 
@@ -121,6 +128,21 @@ func select_slot(slot_index: int, force: bool = false) -> bool:
 
 func selecionar_slot(slot_index: int) -> bool:
 	return select_slot(slot_index)
+
+
+func get_active_recoil_offset() -> Vector2:
+	var w = get_weapon()
+	if w and "current_recoil_offset" in w:
+		return w.current_recoil_offset
+	return Vector2.ZERO
+
+
+func reset_recoil() -> void:
+	var w = get_weapon()
+	if w and w.has_method("reset_recoil"):
+		w.reset_recoil()
+	if main_camera and main_camera.has_method("reset_recoil"):
+		main_camera.reset_recoil()
 
 
 ## Delegação de Comandos para a Arma Ativa (SRS Seções 2 e 3.1)
