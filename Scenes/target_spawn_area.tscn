@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://c6tgtspwnarea01"]
+
+[ext_resource type="Script" path="res://Scripts/target_spawn_area.gd" id="1_spawn_area"]
+
+[node name="TargetSpawnArea" type="Node3D"]
+script = ExtResource("1_spawn_area")

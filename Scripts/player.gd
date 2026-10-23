@@ -120,13 +120,16 @@ func _ready() -> void:
 	if main_camera and "valorant_sensitivity" in main_camera:
 		main_camera.valorant_sensitivity = valorant_sensitivity
 
-	# Load bullet trails preference if saved on disk
+	# Load bullet trails preference if saved on disk (padrão desabilitado)
 	var config := ConfigFile.new()
 	if config.load(SETTINGS_PATH) == OK:
-		var trails_pref = config.get_value("gameplay", "bullet_trails", bullet_tracing_enabled)
+		var trails_pref = config.get_value("gameplay", "bullet_trails", false)
 		if trails_pref is bool:
 			bullet_tracing_enabled = trails_pref
 			_apply_bullet_tracing(bullet_tracing_enabled)
+	else:
+		bullet_tracing_enabled = false
+		_apply_bullet_tracing(false)
 
 	if weapon_slot_1 == null:
 		weapon_slot_1 = get_node_or_null("WeaponSlot1")
@@ -296,7 +299,7 @@ func _get_hop_up_step() -> float:
 	return 50.0
 
 
-var bullet_tracing_enabled: bool = true
+var bullet_tracing_enabled: bool = false
 
 
 func toggle_bullet_tracing() -> bool:

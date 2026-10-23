@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://d3gtlfsboar2w"]
+
+[ext_resource type="Script" path="res://Scripts/shooting_gallery_control_panel.gd" id="1_panel"]
+
+[node name="ShootingGalleryControlPanel" type="Node3D"]
+script = ExtResource("1_panel")

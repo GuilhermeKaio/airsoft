@@ -187,10 +187,12 @@ func test_pause_screen_bullet_trails_toggle() -> void:
 	player.name = "Player"
 	root.add_child(player)
 	player._ready()
+	player.set_bullet_tracing(true)
 
 	var pause_instance = PauseScreenScene.instantiate()
 	root.add_child(pause_instance)
 	pause_instance._ready()
+	pause_instance.set_bullet_trails_enabled(true)
 
 	var signal_received := [false, true]
 	pause_instance.bullet_trails_toggled.connect(func(enabled: bool):
@@ -254,8 +256,8 @@ func test_bullet_trails_settings_persistence() -> void:
 	assert_false(pause_instance_2.is_bullet_trails_enabled(), "New pause instance auto-loads disabled trails")
 	assert_false(pause_instance_2.bullet_trails_checkbox.button_pressed, "Checkbox reflects loaded state")
 
-	# Restore to true
-	pause_instance_2.set_bullet_trails_enabled(true, true)
+	# Restore to false as default
+	pause_instance_2.set_bullet_trails_enabled(false, true)
 	pause_instance.free()
 	pause_instance_2.free()
 	BBClass.set_global_trail_enabled(true)

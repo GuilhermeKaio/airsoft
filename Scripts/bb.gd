@@ -25,7 +25,7 @@ func has_collision_exception_with(target: Node) -> bool:
 		return get_collision_exceptions().has(target)
 	return false
 
-static var global_trail_enabled: bool = true
+static var global_trail_enabled: bool = false
 
 static func set_global_trail_enabled(enabled: bool, tree: SceneTree = null) -> void:
 	global_trail_enabled = enabled
@@ -100,7 +100,7 @@ var tempo_voo: float:
 @export var magnus_coefficient: float = 1.0
 
 @export_group("Trail Rendering")
-@export var trail_enabled: bool = true
+@export var trail_enabled: bool = false
 @export var trail_max_points: int = 40
 @export var trail_lifetime: float = 0.4
 @export var trail_width: float = 0.01
@@ -133,8 +133,7 @@ func _ready() -> void:
 	max_contacts_reported = 4
 	body_entered.connect(_on_body_entered)
 
-	if not global_trail_enabled:
-		trail_enabled = false
+	trail_enabled = global_trail_enabled
 
 	if trail_enabled:
 		_setup_trail()

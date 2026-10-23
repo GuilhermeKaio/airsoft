@@ -1,34 +1,83 @@
 class_name ShootingGalleryManager
 extends Node
 
-## Gerenciador da Galeria de Tiro e Sistema de Pontuação (SRS Adicionais Seção 2)
-## Controla cronômetro, modos de sessão, multiplicador de combo, precisão balística e eventos do estande.
+## Gerenciador da Galeria de Tiro e Sistema de Pontuação (SRS Adicionais Seções 1.4 & 2)
+## Orquestra os 3 modos de jogo (Time Attack, Free Practice, Time Attack Hard),
+## as janelas de velocidade de sumir (Longa, Média, Curta), o spawn dinâmico na área delimitada,
+## cronômetro, multiplicadores de combo, precisão e painel de controle.
 
-enum SessionMode {
-	TIME_ATTACK,
-	FREE_PRACTICE
+enum GameMode {
+	TIME_ATTACK = 0,
+	FREE_PRACTICE = 1,
+	TIME_ATTACK_HARD = 2
 }
 
-# Sinais normativos obrigatórios (SRS 2.3)
+enum SessionMode {
+	TIME_ATTACK = 0,
+	FREE_PRACTICE = 1,
+	TIME_ATTACK_HARD = 2
+}
+
+enum DespawnSpeed {
+	LONGA = 0,
+	MEDIA = 1,
+	CURTA = 2
+}
+
+# Sinais normativos obrigatórios (SRS 2.4)
 signal alvo_atingido(alvo: Node, tipo_alvo: int, pontos: int, multiplicador: float)
+signal alvo_desapareceu(alvo: Node)
 signal pontuacao_alterada(pontuacao_atual: int, delta_pontos: int)
-signal sessao_iniciada(tempo_limite: float)
+signal sessao_iniciada(tempo_limite: float, modo: int)
 signal sessao_encerrada(pontuacao_final: int, precisao: float, acertos: int, penalidades: int)
 signal combo_alterado(combo_atual: int, multiplicador: float)
+signal configuracao_alterada(novo_modo: int, nova_velocidade_sumir: int)
 
 # Sinais em inglês para conveniência
 signal target_hit(target: Node, target_type: int, points: int, multiplier: float)
+signal target_despawned(target: Node)
 signal score_changed(current_score: int, delta_points: int)
-signal session_started(time_limit: float)
+signal session_started(time_limit: float, mode: int)
 signal session_ended(final_score: int, accuracy: float, hits: int, penalties: int)
 signal combo_changed(current_combo: int, multiplier: float)
+signal configuration_changed(new_mode: int, new_despawn_speed: int)
 
-@export_group("Session Settings (SRS 2.2)")
-@export var session_mode: SessionMode = SessionMode.FREE_PRACTICE
+@export_group("Session & Game Modes (SRS 2.1 & 2.2)")
+@export var session_mode: SessionMode = SessionMode.FREE_PRACTICE:
+	set(val):
+		if val != session_mode and is_session_active:
+			if session_mode != SessionMode.FREE_PRACTICE:
+				encerrar_sessao()
+			else:
+				is_session_active = false
+		session_mode = val
+	get:
+		return session_mode
+
+var game_mode: GameMode:
+	set(val):
+		session_mode = val as SessionMode
+	get:
+		return session_mode as GameMode
+
 @export var default_time_limit: float = 60.0
 @export var auto_start_practice: bool = true
+@export var practice_target_count: int = 4
 
-@export_group("Combo & Scoring Rules (SRS 2.1)")
+@export_group("Despawn Speeds (SRS 2.1)")
+@export var current_despawn_speed: DespawnSpeed = DespawnSpeed.MEDIA
+## Janela Longa: ~2.5s a 3.0s
+@export var despawn_window_long: float = 3.0
+## Janela Média: ~1.5s a 2.0s
+@export var despawn_window_medium: float = 1.8
+## Janela Curta: ~0.8s a 1.0s
+@export var despawn_window_short: float = 0.9
+
+@export_group("Spawn Area Reference (SRS 1.4)")
+@export var spawn_area: TargetSpawnArea = null
+@export var spawn_area_path: NodePath = ^""
+
+@export_group("Combo & Scoring Rules (SRS 2.3)")
 @export var max_combo_multiplier: float = 4.0
 @export var combo_multiplier_step: float = 0.5
 @export var combo_timeout: float = 4.0
@@ -41,6 +90,13 @@ var score_system = ScoreSystemClass.new()
 var time_limit: float = 60.0
 var time_remaining: float = 60.0
 var is_session_active: bool = false
+
+# Recordes por modo (SRS 2.1)
+var high_scores: Dictionary = {
+	GameMode.TIME_ATTACK: 0,
+	GameMode.FREE_PRACTICE: 0,
+	GameMode.TIME_ATTACK_HARD: 0
+}
 
 var score: int:
 	get: return score_system.score if score_system else 0
@@ -92,12 +148,45 @@ func _ready() -> void:
 	time_limit = default_time_limit
 	time_remaining = time_limit
 
-	# Auto-discover targets in scene tree if available
+	_find_spawn_area()
 	discover_targets()
 	call_deferred("discover_targets")
+	call_deferred("_deferred_initial_setup")
 
+
+func _deferred_initial_setup() -> void:
+	_find_spawn_area()
 	if session_mode == SessionMode.FREE_PRACTICE and auto_start_practice:
-		iniciar_sessao(-1.0)
+		if not is_session_active:
+			iniciar_sessao(-1.0)
+		elif spawn_area and spawn_area.get_active_target_count() == 0:
+			_setup_targets_for_session()
+
+
+func _find_spawn_area() -> void:
+	if spawn_area != null:
+		return
+	if not spawn_area_path.is_empty():
+		spawn_area = get_node_or_null(spawn_area_path)
+	if spawn_area == null and is_inside_tree():
+		if get_tree().current_scene:
+			spawn_area = get_tree().current_scene.find_child("TargetSpawnArea", true, false)
+		if spawn_area == null:
+			spawn_area = get_tree().root.find_child("TargetSpawnArea", true, false)
+
+	if spawn_area != null:
+		spawn_area.set_manager(self)
+		if not spawn_area.target_despawned.is_connected(_on_spawn_area_target_despawned):
+			spawn_area.target_despawned.connect(_on_spawn_area_target_despawned)
+
+
+func set_spawn_area(area: TargetSpawnArea) -> void:
+	spawn_area = area
+	if spawn_area != null and not spawn_area.target_despawned.is_connected(_on_spawn_area_target_despawned):
+		spawn_area.target_despawned.connect(_on_spawn_area_target_despawned)
+	if session_mode == SessionMode.FREE_PRACTICE and auto_start_practice and is_session_active:
+		if spawn_area != null and spawn_area.get_active_target_count() == 0:
+			_setup_targets_for_session()
 
 
 func _sync_score_system_settings() -> void:
@@ -109,8 +198,8 @@ func _sync_score_system_settings() -> void:
 
 
 func _process(delta: float) -> void:
-	# Contrarrelógio (TIME_ATTACK)
-	if session_mode == SessionMode.TIME_ATTACK and is_session_active:
+	# Contrarrelógio (TIME_ATTACK ou TIME_ATTACK_HARD)
+	if (session_mode == SessionMode.TIME_ATTACK or session_mode == SessionMode.TIME_ATTACK_HARD) and is_session_active:
 		time_remaining -= delta
 		if time_remaining <= 0.0:
 			time_remaining = 0.0
@@ -124,12 +213,92 @@ func _process(delta: float) -> void:
 		combo_changed.emit(0, 1.0)
 
 
+## Retorna o tempo em segundos para a velocidade de sumir selecionada (SRS 2.1)
+func get_despawn_duration() -> float:
+	match current_despawn_speed:
+		DespawnSpeed.LONGA:
+			return despawn_window_long
+		DespawnSpeed.MEDIA:
+			return despawn_window_medium
+		DespawnSpeed.CURTA:
+			return despawn_window_short
+		_:
+			return despawn_window_medium
+
+
+## Define o modo de jogo ativo (SRS 2.1 & 2.2)
+func set_game_mode(new_mode: int) -> void:
+	var mode_val = clampi(new_mode, 0, 2)
+	var new_session_mode = mode_val as SessionMode
+
+	# Encerra a sessão se mudar de modo enquanto uma sessão está acontecendo
+	# O modo Treino Livre não possui tela de fim de sessão; para sem apresentar resumo
+	if new_session_mode != session_mode and is_session_active:
+		if session_mode != SessionMode.FREE_PRACTICE:
+			encerrar_sessao()
+		else:
+			is_session_active = false
+
+	session_mode = new_session_mode
+	game_mode = mode_val as GameMode
+
+	if spawn_area and is_instance_valid(spawn_area):
+		spawn_area.clear_all_targets()
+		if session_mode == SessionMode.FREE_PRACTICE:
+			is_session_active = true
+			_setup_targets_for_session()
+		elif is_session_active:
+			_setup_targets_for_session()
+
+	configuracao_alterada.emit(session_mode, current_despawn_speed)
+	configuration_changed.emit(session_mode, current_despawn_speed)
+
+
+func set_session_mode(new_mode: int) -> void:
+	set_game_mode(new_mode)
+
+
+## Define a velocidade da janela de sumir (SRS 2.1)
+func set_despawn_speed(new_speed: int) -> void:
+	var speed_val = clampi(new_speed, 0, 2)
+	current_despawn_speed = speed_val as DespawnSpeed
+	configuracao_alterada.emit(session_mode, current_despawn_speed)
+	configuration_changed.emit(session_mode, current_despawn_speed)
+
+
+## Alterna ciclicamente entre os 3 modos de jogo
+func cycle_game_mode() -> int:
+	var next_mode = (int(session_mode) + 1) % 3
+	set_game_mode(next_mode)
+	return next_mode
+
+
+## Alterna ciclicamente entre as 3 velocidades de sumir
+func cycle_despawn_speed() -> int:
+	var next_speed = (int(current_despawn_speed) + 1) % 3
+	set_despawn_speed(next_speed)
+	return next_speed
+
+
+## Retorna o recorde para o modo especificado ou do modo atual
+func get_high_score(mode: int = -1) -> int:
+	var target_mode = mode if mode >= 0 else int(session_mode)
+	return high_scores.get(target_mode, 0)
+
+
+## Reseta os recordes acumulados
+func reset_high_scores() -> void:
+	high_scores[GameMode.TIME_ATTACK] = 0
+	high_scores[GameMode.FREE_PRACTICE] = 0
+	high_scores[GameMode.TIME_ATTACK_HARD] = 0
+
+
 ## Inicia sessão do estande de tiro (SRS 2.2)
 func iniciar_sessao(duracao: float = -1.0) -> void:
 	_sync_score_system_settings()
 	if duracao > 0.0:
 		time_limit = duracao
-	elif session_mode == SessionMode.TIME_ATTACK:
+	elif session_mode == SessionMode.TIME_ATTACK or session_mode == SessionMode.TIME_ATTACK_HARD:
 		time_limit = default_time_limit
 	else:
 		time_limit = 0.0
@@ -139,13 +308,16 @@ func iniciar_sessao(duracao: float = -1.0) -> void:
 
 	score_system.zerar()
 
-	# Reset targets
+	# Reseta alvos estáticos pré-existentes
 	for t in registered_targets:
-		if is_instance_valid(t) and t.has_method("reset_target"):
+		if is_instance_valid(t) and t.has_method("reset_target") and (spawn_area == null or not spawn_area.get_active_targets().has(t)):
 			t.reset_target()
 
-	sessao_iniciada.emit(time_limit)
-	session_started.emit(time_limit)
+	# Orquestra alvos dinâmicos na área de spawn conforme o modo de jogo (SRS 2.2)
+	_setup_targets_for_session()
+
+	sessao_iniciada.emit(time_limit, int(session_mode))
+	session_started.emit(time_limit, int(session_mode))
 	pontuacao_alterada.emit(0, 0)
 	score_changed.emit(0, 0)
 	combo_alterado.emit(0, 1.0)
@@ -156,6 +328,28 @@ func start_session(duration: float = -1.0) -> void:
 	iniciar_sessao(duration)
 
 
+func _setup_targets_for_session() -> void:
+	if spawn_area == null:
+		return
+
+	spawn_area.clear_all_targets()
+
+	match session_mode:
+		SessionMode.TIME_ATTACK:
+			# 1 alvo por vez na área (SRS 2.2)
+			spawn_area.spawn_target(0, 0, 0.0)
+
+		SessionMode.FREE_PRACTICE:
+			# Quantidade fixa X alvos simultâneos (apenas ENEMY)
+			for i in range(practice_target_count):
+				spawn_area.spawn_target(0, 0, 0.0)
+
+		SessionMode.TIME_ATTACK_HARD:
+			# 1 alvo temporizado com velocidade de sumir selecionada
+			var window = get_despawn_duration()
+			spawn_area.spawn_target(0, 0, window)
+
+
 ## Encerra a sessão ativa e consolida estatísticas (SRS 2.2)
 func encerrar_sessao() -> void:
 	if not is_session_active:
@@ -163,6 +357,15 @@ func encerrar_sessao() -> void:
 
 	is_session_active = false
 	var precisao: float = get_accuracy()
+
+	# Atualiza recorde (High Score) do modo
+	var cur_mode = int(session_mode)
+	if score > high_scores.get(cur_mode, 0):
+		high_scores[cur_mode] = score
+
+	if spawn_area and is_instance_valid(spawn_area):
+		if session_mode != SessionMode.FREE_PRACTICE:
+			spawn_area.clear_all_targets()
 
 	sessao_encerrada.emit(score, precisao, enemy_hits, friendly_hits)
 	session_ended.emit(score, precisao, enemy_hits, friendly_hits)
@@ -172,7 +375,7 @@ func end_session() -> void:
 	encerrar_sessao()
 
 
-## Zera pontuação e estatísticas (SRS 2.2 - Free Practice)
+## Zera pontuação e estatísticas (SRS 2.2)
 func zerar_pontuacao() -> void:
 	var old_score = score
 	score_system.zerar()
@@ -197,8 +400,7 @@ func register_shot(count: int = 1) -> void:
 	registrar_disparo(count)
 
 
-## Disparo no vazio / erro (SRS 2.1)
-## Reduz gradualmente o tempo do combo
+## Disparo no vazio / erro (SRS 2.3)
 func registrar_erro(reducao_segundos: float = 1.0) -> void:
 	score_system.registrar_erro(reducao_segundos)
 
@@ -207,10 +409,10 @@ func register_miss(reduction_seconds: float = 1.0) -> void:
 	registrar_erro(reduction_seconds)
 
 
-## Callback de impacto no alvo (SRS 2.1)
+## Callback de impacto no alvo (SRS 2.3)
 func on_target_hit(alvo: Node, _bb: Node = null) -> void:
-	# No Time Attack, bloqueia novos pontos se a sessão estiver inativa
-	if session_mode == SessionMode.TIME_ATTACK and not is_session_active:
+	# No Time Attack e Time Attack Hard, bloqueia pontos se a sessão estiver inativa
+	if (session_mode == SessionMode.TIME_ATTACK or session_mode == SessionMode.TIME_ATTACK_HARD) and not is_session_active:
 		return
 
 	var target_type_val: int = 0
@@ -231,9 +433,70 @@ func on_target_hit(alvo: Node, _bb: Node = null) -> void:
 	combo_alterado.emit(combo, combo_multiplier)
 	combo_changed.emit(combo, combo_multiplier)
 
+	# Atualiza spawn dinâmico na área de spawn conforme as regras do modo (SRS 2.2)
+	_handle_target_hit_spawn_logic(alvo)
+
 
 func _on_target_hit(alvo: Node, bb: Node = null) -> void:
 	on_target_hit(alvo, bb)
+
+
+func _handle_target_hit_spawn_logic(alvo: Node) -> void:
+	if spawn_area == null or not is_instance_valid(spawn_area):
+		return
+
+	var active_spawned = spawn_area.get_active_targets()
+	if not active_spawned.has(alvo):
+		return
+
+	match session_mode:
+		SessionMode.TIME_ATTACK:
+			# Limpa todos os alvos e mantém estritamente 1 único alvo até o fim do tempo (SRS 2.2)
+			spawn_area.clear_all_targets()
+			if is_session_active:
+				spawn_area.spawn_target(0, 0, 0.0)
+
+		SessionMode.FREE_PRACTICE:
+			# Ao abater qualquer um, remove o alvo e repõe até a quantidade fixa (SRS 2.2)
+			spawn_area.remove_target(alvo)
+			while spawn_area.get_active_target_count() < practice_target_count:
+				spawn_area.spawn_target(0, 0, 0.0)
+
+		SessionMode.TIME_ATTACK_HARD:
+			# No Hard: limpa todos os alvos e spawna estritamente 1 novo alvo temporizado
+			spawn_area.clear_all_targets()
+			if is_session_active:
+				var window = get_despawn_duration()
+				spawn_area.spawn_target(0, 0, window)
+
+
+## Callback de desaparecimento por expiração de tempo (Time Attack Hard - SRS 2.2 e 2.3)
+func on_target_despawned(alvo: Node) -> void:
+	if alvo == null or not is_instance_valid(alvo) or alvo.has_meta("_despawn_handled"):
+		return
+	alvo.set_meta("_despawn_handled", true)
+
+	if not is_session_active and session_mode != SessionMode.FREE_PRACTICE:
+		return
+
+	# Em Time Attack Hard, alvo desaparecido zera o combo e não concede pontos
+	if session_mode == SessionMode.TIME_ATTACK_HARD:
+		_reset_combo()
+		alvo_desapareceu.emit(alvo)
+		target_despawned.emit(alvo)
+
+		if spawn_area and is_instance_valid(spawn_area):
+			spawn_area.clear_all_targets()
+			if is_session_active:
+				var window = get_despawn_duration()
+				spawn_area.spawn_target(0, 0, window)
+	else:
+		alvo_desapareceu.emit(alvo)
+		target_despawned.emit(alvo)
+
+
+func _on_spawn_area_target_despawned(alvo: Node) -> void:
+	on_target_despawned(alvo)
 
 
 func _reset_combo() -> void:
@@ -261,6 +524,13 @@ func register_target(alvo: Node) -> void:
 	elif alvo.has_signal("hit") and not alvo.hit.is_connected(on_target_hit):
 		alvo.hit.connect(on_target_hit)
 
+	var is_spawned_by_area = (spawn_area != null and is_instance_valid(spawn_area) and (alvo.get_parent() == spawn_area or spawn_area.get_active_targets().has(alvo)))
+	if not is_spawned_by_area:
+		if alvo.has_signal("alvo_desapareceu") and not alvo.alvo_desapareceu.is_connected(on_target_despawned):
+			alvo.alvo_desapareceu.connect(on_target_despawned)
+		elif alvo.has_signal("target_despawned") and not alvo.target_despawned.is_connected(on_target_despawned):
+			alvo.target_despawned.connect(on_target_despawned)
+
 
 func registrar_alvo(alvo: Node) -> void:
 	register_target(alvo)
@@ -280,7 +550,7 @@ func discover_targets(root: Node = null) -> void:
 
 
 func _search_and_register_targets(node: Node) -> void:
-	if node.is_in_group("shooting_targets") or node.has_method("reset_target"):
+	if node is ShootingTarget or node.is_in_group("shooting_targets") or node.has_method("reset_target"):
 		register_target(node)
 	for child in node.get_children():
 		_search_and_register_targets(child)
