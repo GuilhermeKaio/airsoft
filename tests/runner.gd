@@ -318,6 +318,47 @@ func _initialize() -> void:
 			print("  [PASSED] %s" % m)
 			passed += 1
 
+	# 14. Pause Screen & Double Sensitivity Control (SRS Seção 6.2)
+	var pause_test = load("res://tests/test_pause_screen.gd").new()
+	var pause_methods = [
+		"test_pause_screen_ui_elements",
+		"test_two_way_slider_and_line_edit_sync",
+		"test_settings_persistence",
+		"test_immediate_runtime_application_to_camera",
+		"test_pause_and_resume_flow"
+	]
+
+	print("\n[Pause Screen & Double Sensitivity Control (SRS Seção 6.2)]")
+	for m in pause_methods:
+		pause_test._reset()
+		pause_test.call(m)
+		if pause_test._failed:
+			print("  [FAILED] %s -> %s" % [m, pause_test._message])
+			failed += 1
+		else:
+			print("  [PASSED] %s" % m)
+			passed += 1
+
+	# 15. Valorant Ballistic Rotation Conversion (SRS Seção 6.1)
+	var val_test = load("res://tests/test_valorant_sensitivity.gd").new()
+	var val_methods = [
+		"test_valorant_scale_constants",
+		"test_camera_rotation_calculation",
+		"test_custom_sensitivity_scaling",
+		"test_pitch_clamping"
+	]
+
+	print("\n[Valorant Ballistic Rotation Conversion (SRS Seção 6.1)]")
+	for m in val_methods:
+		val_test._reset()
+		val_test.call(m)
+		if val_test._failed:
+			print("  [FAILED] %s -> %s" % [m, val_test._message])
+			failed += 1
+		else:
+			print("  [PASSED] %s" % m)
+			passed += 1
+
 	print("\n==================================================")
 	print("--- TOTAL: %d passed, %d failed ---" % [passed, failed])
 	print("==================================================")

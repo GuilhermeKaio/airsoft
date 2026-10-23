@@ -13,31 +13,99 @@ layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 
 [node name="Background" type="ColorRect" parent="PauseOverlay" unique_id=1622422406]
-layout_mode = 0
+layout_mode = 1
+anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-color = Color(0, 0, 0, 0.7)
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.75)
 
 [node name="CenterContainer" type="CenterContainer" parent="PauseOverlay" unique_id=1404577873]
-layout_mode = 0
+layout_mode = 1
+anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 
 [node name="VBoxContainer" type="VBoxContainer" parent="PauseOverlay/CenterContainer" unique_id=1923571428]
+custom_minimum_size = Vector2(360, 0)
 layout_mode = 2
 theme_override_constants/separation = 16
 
 [node name="TitleLabel" type="Label" parent="PauseOverlay/CenterContainer/VBoxContainer" unique_id=2089395743]
 layout_mode = 2
-theme_override_font_sizes/font_size = 48
+theme_override_font_sizes/font_size = 40
 text = "PAUSADO"
 horizontal_alignment = 1
 
+[node name="HSeparator" type="HSeparator" parent="PauseOverlay/CenterContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="SettingsContainer" type="VBoxContainer" parent="PauseOverlay/CenterContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="SettingsTitle" type="Label" parent="PauseOverlay/CenterContainer/VBoxContainer/SettingsContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.85, 0.85, 0.85, 1)
+theme_override_font_sizes/font_size = 16
+text = "CONFIGURAÇÕES DE MIRA"
+horizontal_alignment = 1
+
+[node name="SensitivityRow" type="HBoxContainer" parent="PauseOverlay/CenterContainer/VBoxContainer/SettingsContainer"]
+layout_mode = 2
+theme_override_constants/separation = 12
+alignment = 1
+
+[node name="SensitivityLabel" type="Label" parent="PauseOverlay/CenterContainer/VBoxContainer/SettingsContainer/SensitivityRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 14
+text = "Sensibilidade (Valorant):"
+
+[node name="SensitivitySlider" type="HSlider" parent="PauseOverlay/CenterContainer/VBoxContainer/SettingsContainer/SensitivityRow"]
+custom_minimum_size = Vector2(140, 24)
+layout_mode = 2
+size_flags_vertical = 4
+min_value = 0.05
+max_value = 2.0
+step = 0.01
+value = 0.4
+
+[node name="SensitivityLineEdit" type="LineEdit" parent="PauseOverlay/CenterContainer/VBoxContainer/SettingsContainer/SensitivityRow"]
+custom_minimum_size = Vector2(65, 30)
+layout_mode = 2
+size_flags_vertical = 4
+text = "0.400"
+alignment = 1
+max_length = 6
+
+[node name="HSeparator2" type="HSeparator" parent="PauseOverlay/CenterContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="ButtonsContainer" type="VBoxContainer" parent="PauseOverlay/CenterContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="ResumeButton" type="Button" parent="PauseOverlay/CenterContainer/VBoxContainer/ButtonsContainer"]
+custom_minimum_size = Vector2(0, 36)
+layout_mode = 2
+text = "Continuar"
+
+[node name="RestartButton" type="Button" parent="PauseOverlay/CenterContainer/VBoxContainer/ButtonsContainer"]
+custom_minimum_size = Vector2(0, 32)
+layout_mode = 2
+text = "Reiniciar Partida"
+
 [node name="InstructionLabel" type="Label" parent="PauseOverlay/CenterContainer/VBoxContainer" unique_id=176885139]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.8, 0.8, 0.8, 0.8)
-theme_override_font_sizes/font_size = 18
-text = "Pressione ESC para voltar ao jogo"
+theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 0.8)
+theme_override_font_sizes/font_size = 13
+text = "Pressione ESC para alternar o pause"
 horizontal_alignment = 1
