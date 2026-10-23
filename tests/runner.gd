@@ -383,6 +383,31 @@ func _initialize() -> void:
 			print("  [PASSED] %s" % m)
 			passed += 1
 
+	# 17. Advanced Movement (Bunny Hop & Air Strafe - SRS Adicionais Seção 4)
+	var bhop_test = load("res://tests/test_advanced_movement.gd").new()
+	var bhop_methods = [
+		"test_jump_timing_window_and_inertia_preservation",
+		"test_rhythm_loss_penalty_after_window",
+		"test_air_strafe_left_coordination_and_acceleration",
+		"test_air_strafe_right_coordination_and_acceleration",
+		"test_uncoordinated_strafe_rejection",
+		"test_speed_clamping_to_max_bhop_speed",
+		"test_jump_buffering",
+		"test_air_strafe_helper_formula_and_vectors",
+		"test_can_bunny_hop_predicate"
+	]
+
+	print("\n[Advanced Movement (Bunny Hop & Air Strafe - SRS Adicionais Seção 4)]")
+	for m in bhop_methods:
+		bhop_test._reset()
+		bhop_test.call(m)
+		if bhop_test._failed:
+			print("  [FAILED] %s -> %s" % [m, bhop_test._message])
+			failed += 1
+		else:
+			print("  [PASSED] %s" % m)
+			passed += 1
+
 	print("\n==================================================")
 	print("--- TOTAL: %d passed, %d failed ---" % [passed, failed])
 	print("==================================================")

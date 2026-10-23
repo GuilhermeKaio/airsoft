@@ -14,6 +14,14 @@ signal estado_cinematico_alterado(novo_estado: int)
 signal accuracy_deadzone_entered()
 signal accuracy_deadzone_exited()
 
+# Sinais de Movimentação Avançada (SRS Adicionais Seção 4)
+signal bunny_hop_performed(speed: float)
+signal bunny_hop_executado(velocidade: float)
+signal bunny_hop_failed()
+signal bunny_hop_falhou()
+signal air_strafe_accelerated(speed: float, delta_speed: float)
+signal air_strafe_acelerado(velocidade: float, delta_velocidade: float)
+
 enum KinematicState {
 	STATIONARY = 0,
 	WALKING = 1,
@@ -46,6 +54,23 @@ enum EstadoCinematico {
 @export var ground_acceleration: float = 40.0
 @export var ground_friction: float = 28.0
 @export var counter_strafe_multiplier: float = 2.5
+
+@export_group("Advanced Movement (Bunny Hop & Air Strafe - SRS Adicionais Seção 4)")
+@export var bunny_hop_enabled: bool = true
+@export var bhop_jump_window: float = 0.1 # Janela de tolerância <= 0.1s (SRS 4.1.1)
+@export var bhop_max_speed: float = 15.0 # Teto máximo configurável (SRS 4.1.3: 15.0 m/s)
+@export var bhop_jump_boost: float = 0.2 # Preservação / pequeno incremento por salto perfeito
+@export var air_acceleration: float = 12.0 # air_accel (SRS 4.1.2)
+@export var air_strafe_efficiency_min: float = 0.2
+@export var jump_buffer_time: float = 0.1
+
+var time_on_floor: float = 0.0
+var jump_buffer_timer: float = 0.0
+var was_on_floor: bool = true
+var is_bunny_hopping: bool = false
+var accumulated_yaw_delta: float = 0.0
+var _last_camera_yaw: float = 0.0
+var _is_currently_air_strafing: bool = false
 
 var current_movement_spread: float = 0.0
 var _last_emitted_spread: float = -999.0
@@ -408,19 +433,78 @@ func update_movement_spread(delta: float) -> void:
 		dispersao_movimento_alterada.emit(current_movement_spread, int(state))
 
 
-func _physics_process(delta: float) -> void:
-	if not is_on_floor():
+func register_yaw_delta(delta_rad: float) -> void:
+	accumulated_yaw_delta += delta_rad
+
+
+func get_time_on_floor() -> float:
+	return time_on_floor
+
+
+func is_air_strafing() -> bool:
+	return _is_currently_air_strafing
+
+
+func can_bunny_hop() -> bool:
+	return bunny_hop_enabled and is_player_on_floor() and time_on_floor <= bhop_jump_window
+
+
+func get_bhop_max_speed() -> float:
+	return bhop_max_speed
+
+
+func set_bhop_max_speed(value: float) -> void:
+	bhop_max_speed = value
+
+
+func calculate_air_strafe_acceleration(wish_dir: Vector3, yaw_delta: float, cur_vel: Vector3, delta: float) -> Vector3:
+	var vel_h := Vector3(cur_vel.x, 0.0, cur_vel.z)
+	var h_speed := vel_h.length()
+	if h_speed < 0.05:
+		return wish_dir.normalized() * (air_acceleration * delta)
+
+	var v_norm := vel_h.normalized()
+	var u_wish := Vector3(wish_dir.x, 0.0, wish_dir.z).normalized()
+	var alignment := u_wish.dot(v_norm)
+	var eff := clampf(maxf(alignment, air_strafe_efficiency_min), 0.0, 1.0)
+
+	var cross_y := v_norm.cross(u_wish).y
+	var strafe_side := signf(cross_y)
+	if absf(strafe_side) < 0.01:
+		strafe_side = 1.0
+
+	var p_perp: Vector3 = (Vector3.UP.cross(v_norm) if strafe_side > 0.0 else v_norm.cross(Vector3.UP)).normalized()
+	var a_mag := air_acceleration * eff
+	var delta_speed := a_mag * delta
+	var new_speed := minf(h_speed + delta_speed, bhop_max_speed)
+
+	var turn_injection := p_perp * (a_mag * delta / maxf(h_speed, 1.0))
+	var new_dir := (v_norm + turn_injection).normalized()
+	var new_vel := new_dir * new_speed
+	return new_vel - vel_h
+
+
+func process_movement(delta: float, input_dir: Vector2, jump_pressed: bool, sprint_pressed: bool, yaw_delta: float) -> void:
+	var on_floor := is_player_on_floor()
+
+	if on_floor and not was_on_floor:
+		time_on_floor = 0.0
+		was_on_floor = true
+
+	if not on_floor:
 		velocity.y -= gravity * delta
+		time_on_floor = 0.0
+		was_on_floor = false
 
-	if Input.is_action_just_pressed("jump") and is_on_floor():
-		velocity.y = jump_velocity
+	# Jump buffer timer tracking
+	if jump_pressed:
+		jump_buffer_timer = jump_buffer_time
+	elif jump_buffer_timer > 0.0:
+		jump_buffer_timer = maxf(0.0, jump_buffer_timer - delta)
 
-	var input_dir := Vector2(
-		Input.get_action_strength("move_right") - Input.get_action_strength("move_left"),
-		Input.get_action_strength("move_back") - Input.get_action_strength("move_forward")
-	)
-
+	# Camera direction vectors
 	var direction := Vector3.ZERO
+	var cam_right := Vector3.RIGHT
 	if main_camera:
 		var cam_basis := main_camera.global_transform.basis
 		var forward := -cam_basis.z
@@ -430,28 +514,151 @@ func _physics_process(delta: float) -> void:
 		var right := cam_basis.x
 		right.y = 0.0
 		right = right.normalized()
+		cam_right = right
 
 		direction = (forward * -input_dir.y + right * input_dir.x)
 		if direction.length() > 0.0:
 			direction = direction.normalized()
-
-	# Andando (Shift): 1.0 m/s < v_h <= 3.0 m/s. Correndo: v_h > 3.0 m/s
-	var is_walking := Input.is_action_pressed("sprint")
-	var target_speed := walk_speed if is_walking else speed
-
-	var cur_h_vel := Vector2(velocity.x, velocity.z)
-	if direction.length_squared() > 0.0:
-		var wish_h_vel := Vector2(direction.x, direction.z) * target_speed
-		# Detecção de Counter-Strafing: frenagem ativa contra inércia oposta
-		var is_counter_strafing := cur_h_vel.length_squared() > 0.1 and cur_h_vel.normalized().dot(wish_h_vel.normalized()) < -0.1
-		var accel := ground_acceleration * (counter_strafe_multiplier if is_counter_strafing else 1.0)
-		cur_h_vel = cur_h_vel.move_toward(wish_h_vel, accel * delta)
 	else:
-		# Sem input direcional: atrito desacelera até a zona morta (deadzone)
-		cur_h_vel = cur_h_vel.move_toward(Vector2.ZERO, ground_friction * delta)
+		direction = Vector3(input_dir.x, 0.0, input_dir.y)
+		if direction.length() > 0.0:
+			direction = direction.normalized()
+
+	var is_walking := sprint_pressed
+	var target_speed := walk_speed if is_walking else speed
+	var cur_h_vel := Vector2(velocity.x, velocity.z)
+	var current_speed := cur_h_vel.length()
+	var want_jump: bool = jump_pressed or jump_buffer_timer > 0.0
+
+	_is_currently_air_strafing = false
+
+	if on_floor:
+		if want_jump:
+			# Check Bunny Hop timing window (SRS 4.1.1: <= 0.1s)
+			if bunny_hop_enabled and time_on_floor <= bhop_jump_window:
+				# PERFECT BUNNY HOP JUMP!
+				velocity.y = jump_velocity
+				jump_buffer_timer = 0.0
+				time_on_floor = 0.0
+				was_on_floor = false
+				is_bunny_hopping = true
+
+				# Horizontal velocity is preserved without floor friction!
+				if current_speed > 0.1 and bhop_jump_boost > 0.0:
+					current_speed = minf(current_speed + bhop_jump_boost, bhop_max_speed)
+					cur_h_vel = cur_h_vel.normalized() * current_speed
+
+				bunny_hop_performed.emit(current_speed)
+				bunny_hop_executado.emit(current_speed)
+
+				velocity.x = cur_h_vel.x
+				velocity.z = cur_h_vel.y
+				return
+			else:
+				# Normal jump after timing window expired or bhop disabled
+				velocity.y = jump_velocity
+				jump_buffer_timer = 0.0
+				was_on_floor = false
+				is_bunny_hopping = false
+
+		time_on_floor += delta
+
+		# Rhythm loss penalty (SRS 4.1.4: > 0.1s without jump)
+		if time_on_floor > bhop_jump_window:
+			if is_bunny_hopping:
+				is_bunny_hopping = false
+				bunny_hop_failed.emit()
+				bunny_hop_falhou.emit()
+
+			if current_speed > target_speed:
+				current_speed = target_speed
+				cur_h_vel = cur_h_vel.normalized() * current_speed
+
+			# Regular ground acceleration and friction
+			if direction.length_squared() > 0.0:
+				var wish_h_vel := Vector2(direction.x, direction.z) * target_speed
+				var is_counter_strafing := cur_h_vel.length_squared() > 0.1 and cur_h_vel.normalized().dot(wish_h_vel.normalized()) < -0.1
+				var accel := ground_acceleration * (counter_strafe_multiplier if is_counter_strafing else 1.0)
+				cur_h_vel = cur_h_vel.move_toward(wish_h_vel, accel * delta)
+			else:
+				cur_h_vel = cur_h_vel.move_toward(Vector2.ZERO, ground_friction * delta)
+		else:
+			# Within the jump timing window (<= 0.1s):
+			# Normal floor friction is NOT applied! Inherent velocity preserved!
+			pass
+
+	else: # Airborne (not on_floor)
+		was_on_floor = false
+
+		# Air Strafe Acceleration (SRS 4.1.2)
+		# Exclusively strafing: lateral keys pressed, no forward/backward
+		var is_lateral_only: bool = absf(input_dir.x) > 0.1 and absf(input_dir.y) < 0.1
+		if is_lateral_only and bunny_hop_enabled:
+			var strafe_side: float = signf(input_dir.x) # -1.0 = left, +1.0 = right
+
+			# Coordinated turning:
+			# Turning left: yaw_delta > 0.0001 (positive Y rotation in Godot)
+			# Turning right: yaw_delta < -0.0001 (negative Y rotation in Godot)
+			var is_turning_left: bool = yaw_delta > 0.0001
+			var is_turning_right: bool = yaw_delta < -0.0001
+			var is_coordinated: bool = (strafe_side < 0.0 and is_turning_left) or (strafe_side > 0.0 and is_turning_right)
+
+			if is_coordinated:
+				_is_currently_air_strafing = true
+				var vel_3d := Vector3(cur_h_vel.x, 0.0, cur_h_vel.y)
+				var h_speed := vel_3d.length()
+				var wish_dir_3d: Vector3 = cam_right * strafe_side
+
+				if h_speed > 0.05:
+					var v_norm := vel_3d / h_speed
+					var alignment := wish_dir_3d.dot(v_norm)
+					var eff := clampf(maxf(alignment, air_strafe_efficiency_min), 0.0, 1.0)
+
+					# a_strafe = air_accel * (u_wish dot v_horizontal)
+					var a_mag := air_acceleration * eff
+					var delta_speed := a_mag * delta
+					var new_speed := minf(h_speed + delta_speed, bhop_max_speed)
+
+					# Vector perpendicular to velocity in the direction of the strafe
+					var p_perp: Vector3 = Vector3.UP.cross(v_norm) if strafe_side < 0.0 else v_norm.cross(Vector3.UP)
+					var turn_factor := clampf(absf(yaw_delta) * 5.0, 0.05, 0.6)
+					var turn_injection := p_perp * (a_mag * delta / maxf(h_speed, 1.0) + turn_factor)
+					var new_dir := (v_norm + turn_injection).normalized()
+
+					var new_vel_3d := new_dir * new_speed
+					cur_h_vel = Vector2(new_vel_3d.x, new_vel_3d.z)
+
+					air_strafe_accelerated.emit(new_speed, delta_speed)
+					air_strafe_acelerado.emit(new_speed, delta_speed)
+				else:
+					cur_h_vel += Vector2(wish_dir_3d.x, wish_dir_3d.z) * (air_acceleration * delta)
+
+	# Clamping to max allowed bhop speed (SRS 4.1.3)
+	if cur_h_vel.length() > bhop_max_speed:
+		cur_h_vel = cur_h_vel.normalized() * bhop_max_speed
 
 	velocity.x = cur_h_vel.x
 	velocity.z = cur_h_vel.y
 
-	move_and_slide()
+
+func _physics_process(delta: float) -> void:
+	var input_dir := Vector2(
+		Input.get_action_strength("move_right") - Input.get_action_strength("move_left"),
+		Input.get_action_strength("move_back") - Input.get_action_strength("move_forward")
+	)
+	var jump_pressed := Input.is_action_just_pressed("jump")
+	var sprint_pressed := Input.is_action_pressed("sprint")
+
+	var current_cam_yaw := main_camera.global_rotation.y if main_camera else 0.0
+	var yaw_delta := accumulated_yaw_delta
+	accumulated_yaw_delta = 0.0
+
+	if absf(yaw_delta) < 0.0001 and main_camera:
+		yaw_delta = wrapf(current_cam_yaw - _last_camera_yaw, -PI, PI)
+	_last_camera_yaw = current_cam_yaw
+
+	process_movement(delta, input_dir, jump_pressed, sprint_pressed, yaw_delta)
+
+	if is_inside_tree():
+		move_and_slide()
 	update_movement_spread(delta)

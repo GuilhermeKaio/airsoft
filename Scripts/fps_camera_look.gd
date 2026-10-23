@@ -1,5 +1,7 @@
 extends Camera3D
 
+signal mouse_yaw_rotated(yaw_delta_rad: float)
+
 const VALORANT_DEG_PER_COUNT: float = 0.07
 const VALORANT_RADIAN_FACTOR: float = 0.0012217304764
 const DEFAULT_SENSITIVITY: float = 0.40
@@ -16,6 +18,7 @@ const SETTINGS_PATH: String = "user://settings.cfg"
 
 var _is_active_camera: bool = false
 var uncompensated_recoil: Vector2 = Vector2.ZERO # x: yaw (rad), y: pitch (rad)
+var last_yaw_delta: float = 0.0
 
 
 func apply_recoil(pitch_deg: float, yaw_deg: float) -> void:
@@ -111,6 +114,11 @@ func _unhandled_input(event: InputEvent) -> void:
 			uncompensated_recoil.x += comp
 
 		rotate_y(-mouse_dx)
+		last_yaw_delta = -mouse_dx
+		mouse_yaw_rotated.emit(-mouse_dx)
+		var p = get_parent()
+		if p and p.has_method("register_yaw_delta"):
+			p.register_yaw_delta(-mouse_dx)
 
 		var new_pitch: float = rotation.x - mouse_dy
 		rotation.x = clampf(new_pitch, deg_to_rad(min_pitch_deg), deg_to_rad(max_pitch_deg))
