@@ -9,6 +9,7 @@
 [ext_resource type="PackedScene" uid="uid://bvhrgbrtk3lvj" path="res://Scenes/enemy.tscn" id="5_kry3j"]
 [ext_resource type="Script" uid="uid://clg12ifh6wrd4" path="res://Scripts/crosshair.gd" id="6_21xkr"]
 [ext_resource type="Script" uid="uid://ojy3bad6d8ry" path="res://Scripts/fps_camera_look.gd" id="6_344ge"]
+[ext_resource type="PackedScene" path="res://Scenes/rifle.tscn" id="8_rifle"]
 [ext_resource type="PackedScene" uid="uid://u65r5bv7unv7" path="res://Scenes/pistolGlock.tscn" id="9_glock"]
 [ext_resource type="PackedScene" uid="uid://baasnreoqyt3v" path="res://Scenes/pause_screen.tscn" id="11_d1ilt"]
 [ext_resource type="PackedScene" uid="uid://hi278lrvlyb5" path="res://Scenes/magazine_pickup.tscn" id="12_pickup"]
@@ -16,6 +17,8 @@
 [ext_resource type="Resource" path="res://Resources/Magazines/pistol_glock_25bb_030g.tres" id="14_glock_030"]
 [ext_resource type="Resource" path="res://Resources/Magazines/rifle_stanag_30bb_025g.tres" id="15_stanag_025"]
 [ext_resource type="Resource" path="res://Resources/Magazines/shotgun_shell_30bb_020g.tres" id="16_shotgun_020"]
+[ext_resource type="Resource" path="res://Resources/Magazines/pistol_1911_15bb_020g.tres" id="17_p1911_020"]
+[ext_resource type="PackedScene" path="res://Scenes/weapon_pickup.tscn" id="18_weapon_pickup"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_8gbba"]
 sky_top_color = Color(0.60895693, 0.34373838, 0.63823307, 1)
@@ -95,11 +98,30 @@ script = ExtResource("5_hptm8")
 [node name="Player" type="CharacterBody3D" parent="." unique_id=296718553]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.53181, 0, 2.6763916)
 script = ExtResource("5_6bp64")
+weapon = NodePath("WeaponSlot1")
+weapon_slot_1 = NodePath("WeaponSlot1")
+weapon_slot_2 = NodePath("WeaponSlot2")
 
-[node name="Weapon" parent="Player" unique_id=1431892919 instance=ExtResource("1_bo1nx")]
-transform = Transform3D(0.98352706, 0.049164772, 0.17394692, -0.04819619, 0.99878985, -0.009790445, -0.17421776, 0.0012455867, 0.98470634, -2.0503893, 2.3481517, -1.0320365)
+[node name="WeaponSlot1" parent="Player" unique_id=1431892919 instance=ExtResource("1_bo1nx")]
+weapon_model = 1
+bb_scene = ExtResource("2_8gbba")
+weapon_prefab = ExtResource("8_rifle")
+spring_k = 1192.0
+nominal_energy_joules = 1.49
+motor_rpm = 24000.0
+compatible_magazine_type = 1
+equipped_magazine = ExtResource("15_stanag_025")
+
+[node name="WeaponSlot2" parent="Player" unique_id=1431892920 instance=ExtResource("1_bo1nx")]
+visible = false
+weapon_model = 3
 bb_scene = ExtResource("2_8gbba")
 weapon_prefab = ExtResource("9_glock")
+spring_k = 800.0
+nominal_energy_joules = 1.0
+motor_rpm = 12000.0
+compatible_magazine_type = 3
+equipped_magazine = ExtResource("13_glock_025")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Player" unique_id=36120277]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
@@ -139,3 +161,15 @@ magazine = ExtResource("15_stanag_025")
 [node name="Pickup_Shotgun_Incompatible" parent="." unique_id=1973508311 instance=ExtResource("12_pickup")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.5, 0.6, -0.4)
 magazine = ExtResource("16_shotgun_020")
+
+[node name="Pickup_1911" parent="." unique_id=1973508312 instance=ExtResource("12_pickup")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.5, 0.6, 8.6)
+magazine = ExtResource("17_p1911_020")
+
+[node name="WeaponPickup_Shotgun" parent="." unique_id=1973508313 instance=ExtResource("18_weapon_pickup")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6.0, 0.6, 0.0)
+weapon_model = 0
+
+[node name="WeaponPickup_1911" parent="." unique_id=1973508314 instance=ExtResource("18_weapon_pickup")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 11.0, 0.6, 0.0)
+weapon_model = 2

@@ -1,28 +1,124 @@
 extends CharacterBody3D
 
+signal weapon_swapped(new_weapon: Node, slot_index: int)
+signal arma_trocada(nova_arma: Node, slot_index: int)
+signal slot_selected(slot_index: int)
+
 @export var speed: float = 5.0
 @export var sprint_speed: float = 8.5
 @export var jump_velocity: float = 4.5
 @export var gravity: float = 9.8
 
+@export_group("Inventory & Weapon Slots (SRS Seção 4 & 6)")
 @export var weapon: Node
+@export var weapon_slot_1: Node
+@export var weapon_slot_2: Node
+@export var active_slot: int = 1
 
 @onready var main_camera: Camera3D = get_node_or_null("Camera3")
 
 
 func _ready() -> void:
+	if weapon_slot_1 == null:
+		weapon_slot_1 = get_node_or_null("WeaponSlot1")
+		if weapon_slot_1 == null:
+			weapon_slot_1 = get_node_or_null("Weapon")
+	if weapon_slot_2 == null:
+		weapon_slot_2 = get_node_or_null("WeaponSlot2")
+	
 	if weapon == null:
-		weapon = get_node_or_null("Weapon")
+		weapon = weapon_slot_1 if weapon_slot_1 != null else weapon_slot_2
+
+	select_slot(active_slot, true)
 
 
 func get_weapon() -> Node:
 	if weapon == null and is_inside_tree():
-		weapon = get_node_or_null("Weapon")
+		if active_slot == 1 and weapon_slot_1 != null:
+			weapon = weapon_slot_1
+		elif active_slot == 2 and weapon_slot_2 != null:
+			weapon = weapon_slot_2
+		else:
+			weapon = get_node_or_null("Weapon")
+			if weapon == null:
+				weapon = weapon_slot_1 if weapon_slot_1 != null else weapon_slot_2
 	return weapon
 
 
 func set_weapon(new_weapon: Node) -> void:
 	weapon = new_weapon
+	if active_slot == 1:
+		weapon_slot_1 = new_weapon
+	elif active_slot == 2:
+		weapon_slot_2 = new_weapon
+
+
+func get_active_slot() -> int:
+	return active_slot
+
+
+func get_weapon_in_slot(slot_index: int) -> Node:
+	if slot_index == 1:
+		return weapon_slot_1
+	elif slot_index == 2:
+		return weapon_slot_2
+	return null
+
+
+func equip_weapon_in_slot(weapon_node: Node, slot_index: int) -> void:
+	if weapon_node != null and weapon_node.get_parent() != self:
+		if weapon_node.get_parent() != null:
+			weapon_node.get_parent().remove_child(weapon_node)
+		add_child(weapon_node)
+		if weapon_node is Node3D:
+			weapon_node.transform = Transform3D.IDENTITY
+
+	if slot_index == 1:
+		weapon_slot_1 = weapon_node
+	elif slot_index == 2:
+		weapon_slot_2 = weapon_node
+	
+	if active_slot == slot_index:
+		select_slot(slot_index, true)
+	else:
+		if weapon_node != null and "visible" in weapon_node:
+			weapon_node.visible = false
+
+
+func select_slot(slot_index: int, force: bool = false) -> bool:
+	if slot_index != 1 and slot_index != 2:
+		return false
+	if slot_index == active_slot and not force:
+		return true
+
+	var target_weapon: Node = weapon_slot_1 if slot_index == 1 else weapon_slot_2
+	if target_weapon == null and not force:
+		return false
+
+	var previous_weapon: Node = get_weapon()
+	if previous_weapon != null and previous_weapon != target_weapon:
+		if previous_weapon.has_method("atirar"):
+			previous_weapon.atirar(false)
+
+	active_slot = slot_index
+	weapon = target_weapon
+
+	if weapon_slot_1 != null and "visible" in weapon_slot_1:
+		weapon_slot_1.visible = (active_slot == 1)
+	if weapon_slot_2 != null and "visible" in weapon_slot_2:
+		weapon_slot_2.visible = (active_slot == 2)
+
+	if weapon != null and weapon.has_method("_emit_initial_state"):
+		weapon._emit_initial_state()
+
+	weapon_swapped.emit(weapon, active_slot)
+	arma_trocada.emit(weapon, active_slot)
+	slot_selected.emit(active_slot)
+	return true
+
+
+func selecionar_slot(slot_index: int) -> bool:
+	return select_slot(slot_index)
 
 
 ## Delegação de Comandos para a Arma Ativa (SRS Seções 2 e 3.1)
@@ -67,6 +163,19 @@ func _get_hop_up_step() -> float:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	var is_ctrl: bool = ("ctrl_pressed" in event and event.ctrl_pressed)
+	if not is_ctrl and (event.is_action_pressed("weapon_slot_1") or (event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_1)):
+		select_slot(1)
+		if is_inside_tree() and get_viewport():
+			get_viewport().set_input_as_handled()
+		return
+
+	if not is_ctrl and (event.is_action_pressed("weapon_slot_2") or (event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_2)):
+		select_slot(2)
+		if is_inside_tree() and get_viewport():
+			get_viewport().set_input_as_handled()
+		return
+
 	if event.is_action("fire") or (event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT):
 		if not event.is_echo():
 			atirar(event.is_pressed())

@@ -148,6 +148,88 @@ func _initialize() -> void:
 			print("  [PASSED] %s" % m)
 			passed += 1
 
+	# 6. Weapon Types & Specific Models (SRS Seção 4)
+	var wt_test = load("res://tests/test_weapon_types.gd").new()
+	var wt_methods = [
+		"test_shotgun_specs_and_consumption",
+		"test_rifle_specs_and_modes",
+		"test_pistol_1911_specs_and_slide_lock",
+		"test_pistol_glock_specs_and_rpm_switch",
+		"test_weapon_prefabs_from_assets"
+	]
+
+	print("\n[Weapon Types & Specific Models (SRS Seção 4)]")
+	for m in wt_methods:
+		wt_test._reset()
+		wt_test.call(m)
+		if wt_test._failed:
+			print("  [FAILED] %s -> %s" % [m, wt_test._message])
+			failed += 1
+		else:
+			print("  [PASSED] %s" % m)
+			passed += 1
+
+	# 7. Inventory & Weapon Slots 1 and 2 (SRS Seção 4 & 6)
+	var inv_test = load("res://tests/test_inventory.gd").new()
+	var inv_methods = [
+		"test_inventory_slot_initialization",
+		"test_inventory_slot_switching",
+		"test_keyboard_input_slot_switching",
+		"test_hud_auto_updates_on_slot_switch",
+		"test_magazine_pickup_with_active_slot"
+	]
+
+	print("\n[Inventory & Weapon Slots 1 and 2 (SRS Seção 4 & 6)]")
+	for m in inv_methods:
+		inv_test._reset()
+		inv_test.call(m)
+		if inv_test._failed:
+			print("  [FAILED] %s -> %s" % [m, inv_test._message])
+			failed += 1
+		else:
+			print("  [PASSED] %s" % m)
+			passed += 1
+
+	# 8. Weapon Pickups on Ground & E-Key Swap
+	var wp_test = load("res://tests/test_weapon_pickup.gd").new()
+	var wp_methods = [
+		"test_weapon_pickup_initialization",
+		"test_swap_weapon_with_e_key",
+		"test_weapon_drop_preserves_state",
+		"test_pickup_in_secondary_slot",
+		"test_hud_updates_on_weapon_pickup"
+	]
+
+	print("\n[Weapon Pickups & E-Key Weapon Swap]")
+	for m in wp_methods:
+		wp_test._reset()
+		wp_test.call(m)
+		if wp_test._failed:
+			print("  [FAILED] %s -> %s" % [m, wp_test._message])
+			failed += 1
+		else:
+			print("  [PASSED] %s" % m)
+			passed += 1
+
+	# 9. Weapon Alignment & HUD Bounds Fixes
+	var align_test = load("res://tests/test_weapon_alignment.gd").new()
+	var align_methods = [
+		"test_first_person_alignment_with_camera",
+		"test_all_prefabs_mesh_and_muzzle_zero_tilt",
+		"test_ammo_hud_dimensions_and_no_clipping"
+	]
+
+	print("\n[Weapon Alignment & HUD Bounds (Anti-Crooked & Clipping Fixes)]")
+	for m in align_methods:
+		align_test._reset()
+		align_test.call(m)
+		if align_test._failed:
+			print("  [FAILED] %s -> %s" % [m, align_test._message])
+			failed += 1
+		else:
+			print("  [PASSED] %s" % m)
+			passed += 1
+
 	print("\n==================================================")
 	print("--- TOTAL: %d passed, %d failed ---" % [passed, failed])
 	print("==================================================")

@@ -28,6 +28,10 @@ signal mola_ajustada(nova_energia: float)
 
 @export_group("Weapon Identity & Models (SRS 3.2 & 4)")
 @export var weapon_model: WeaponModel = WeaponModel.PISTOL_GLOCK
+@export var projectiles_per_shot: int = 1
+@export var spread_cone_angle: float = 0.0
+@export var allowed_fire_modes: Array[FireMode] = [FireMode.SEMI, FireMode.AUTO]
+@export var is_slide_locked_open: bool = false
 
 @export_group("Prefabs")
 @export var bb_scene: PackedScene
@@ -127,7 +131,9 @@ var mesh: Node3D
 var muzzle: Node3D
 @onready var camera3: Camera3D = get_node_or_null("../Camera3")
 
-var _local_offset: Transform3D
+@export_group("First Person View")
+@export var first_person_offset: Vector3 = Vector3(0.20, -0.2, -0.45)
+
 var _trigger_held: bool = false
 var _fire_cooldown: float = 0.0
 var is_reloading: bool = false
@@ -153,18 +159,50 @@ func _init() -> void:
 	_update_cadence()
 
 
+func _get_target_camera() -> Camera3D:
+	if camera3 and is_instance_valid(camera3):
+		return camera3
+	camera3 = get_node_or_null("../Camera3")
+	if camera3:
+		return camera3
+	var p = get_parent()
+	if p and p.has_node("Camera3"):
+		camera3 = p.get_node("Camera3")
+		return camera3
+	if is_inside_tree() and get_viewport():
+		var vp_cam = get_viewport().get_camera_3d()
+		if vp_cam:
+			return vp_cam
+	return null
+
+
 func _ready() -> void:
 	# O input é delegado pelo Player conforme SRS Seções 2 e 3.1
 	set_process_unhandled_input(false)
 	_update_cadence()
 
-	if camera3:
-		_local_offset = camera3.global_transform.affine_inverse() * global_transform
+	if first_person_offset == Vector3(0.20, -0.2, -0.45) or first_person_offset == Vector3(0.20, -0.18, -0.38):
+		first_person_offset = get_default_offset_for_model(weapon_model)
+
+	var cam := _get_target_camera()
+	if cam:
+		var cam_trans: Transform3D = cam.global_transform if cam.is_inside_tree() else cam.transform
+		var new_trans := Transform3D(cam_trans.basis, cam_trans.origin + cam_trans.basis * first_person_offset)
+		if is_inside_tree():
+			global_transform = new_trans
+		else:
+			transform = new_trans
 	
+	if bb_scene == null:
+		bb_scene = load("res://Scenes/bb.tscn")
+
 	if equipped_magazine == null:
-		equipped_magazine = MagazineLoader.create_magazine(compatible_magazine_type, 25, 25, 0.20)
+		_equip_default_magazine()
 	
 	_emit_initial_state()
+
+	if weapon_prefab == null:
+		weapon_prefab = _resolve_default_prefab()
 
 	if weapon_prefab:
 		weapon_instance = weapon_prefab.instantiate()
@@ -183,9 +221,39 @@ func _ready() -> void:
 			_mesh_initial_rotation = mesh.rotation_degrees
 
 
+func _equip_default_magazine() -> void:
+	match compatible_magazine_type:
+		Magazine.Type.MAG_SHOTGUN_SHELL:
+			equipped_magazine = MagazineLoader.create_shotgun_shell(0.20, 30, 30)
+		Magazine.Type.MAG_RIFLE_STANAG:
+			equipped_magazine = MagazineLoader.create_rifle_stanag(0.25, 30, 30)
+		Magazine.Type.MAG_PISTOL_1911:
+			equipped_magazine = MagazineLoader.create_pistol_1911(0.20, 15, 15)
+		Magazine.Type.MAG_PISTOL_GLOCK, _:
+			equipped_magazine = MagazineLoader.create_pistol_glock(0.20, 25, 25)
+
+
+func _resolve_default_prefab() -> PackedScene:
+	match weapon_model:
+		WeaponModel.SHOTGUN:
+			return load("res://Scenes/shotgun.tscn")
+		WeaponModel.RIFLE:
+			return load("res://Scenes/rifle.tscn")
+		WeaponModel.PISTOL_1911:
+			return load("res://Scenes/pistol1911.tscn")
+		WeaponModel.PISTOL_GLOCK, _:
+			return load("res://Scenes/pistolGlock.tscn")
+
+
 func _process(delta: float) -> void:
-	if camera3:
-		global_transform = camera3.global_transform * _local_offset
+	var cam := _get_target_camera()
+	if cam:
+		var cam_trans: Transform3D = cam.global_transform if cam.is_inside_tree() else cam.transform
+		var new_trans := Transform3D(cam_trans.basis, cam_trans.origin + cam_trans.basis * first_person_offset)
+		if is_inside_tree():
+			global_transform = new_trans
+		else:
+			transform = new_trans
 
 	if is_reloading:
 		_reload_timer -= delta
@@ -261,7 +329,16 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func toggle_fire_mode() -> void:
-	fire_mode = FireMode.AUTO if fire_mode == FireMode.SEMI else FireMode.SEMI
+	if allowed_fire_modes.size() <= 1:
+		print("Fire mode is fixed to %s for %s" % ["SEMI" if fire_mode == FireMode.SEMI else "AUTO", get_weapon_model_name()])
+		return
+	
+	var next_mode = FireMode.AUTO if fire_mode == FireMode.SEMI else FireMode.SEMI
+	if not allowed_fire_modes.has(next_mode):
+		return
+	fire_mode = next_mode
+	if weapon_model == WeaponModel.PISTOL_GLOCK:
+		motor_rpm = 33000.0 if fire_mode == FireMode.AUTO else 12000.0
 	var mode_name := "AUTO" if fire_mode == FireMode.AUTO else "SEMI"
 	print("Fire mode: ", mode_name)
 	fire_mode_changed.emit(mode_name)
@@ -324,8 +401,8 @@ func _start_reload() -> void:
 		var rise_time = reload_time * 0.3
 		var hold_time = reload_time * 0.4
 		
-		tween.tween_property(mesh, "position", _mesh_initial_position + Vector3(-0.1, -0.3, 0), drop_time).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-		tween.parallel().tween_property(mesh, "rotation_degrees", _mesh_initial_rotation + Vector3(0, 0, 45), drop_time).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		tween.tween_property(mesh, "position", _mesh_initial_position + Vector3(-0.04, -0.12, 0.04), drop_time).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		tween.parallel().tween_property(mesh, "rotation_degrees", _mesh_initial_rotation + Vector3(-12, 8, -15), drop_time).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 		
 		tween.tween_interval(hold_time)
 		
@@ -335,10 +412,14 @@ func _start_reload() -> void:
 
 func _finish_reload() -> void:
 	is_reloading = false
+	is_slide_locked_open = false
 	if equipped_magazine:
 		equipped_magazine.refill()
 		ammo_changed.emit(equipped_magazine.current_ammo, equipped_magazine.capacity)
 		municao_alterada.emit(equipped_magazine.current_ammo, equipped_magazine.capacity)
+	if mesh:
+		mesh.position = _mesh_initial_position
+		mesh.rotation_degrees = _mesh_initial_rotation
 	reload_completed.emit()
 	recarga_concluida.emit()
 	print("Reload complete!")
@@ -435,38 +516,78 @@ func get_weapon_model_name() -> String:
 			return "Unknown"
 
 
-func configure_weapon_preset(model: WeaponModel) -> void:
-	weapon_model = model
+static func get_default_offset_for_model(model: WeaponModel) -> Vector3:
 	match model:
 		WeaponModel.SHOTGUN:
+			return Vector3(0.22, -0.25, -0.40)
+		WeaponModel.RIFLE:
+			return Vector3(0.22, -0.25, -0.42)
+		WeaponModel.PISTOL_1911:
+			return Vector3(0.20, -0.2, -0.4)
+		WeaponModel.PISTOL_GLOCK, _:
+			return Vector3(0.20, -0.2, -0.45)
+
+
+func configure_weapon_preset(model: WeaponModel) -> void:
+	weapon_model = model
+	first_person_offset = get_default_offset_for_model(model)
+	match model:
+		WeaponModel.SHOTGUN:
+			first_person_offset = Vector3(0.22, -0.25, -0.40)
 			compatible_magazine_type = Magazine.Type.MAG_SHOTGUN_SHELL
 			simplified_energy_joules = 1.1
 			spring_k = 880.0
 			spring_x = 0.05
 			motor_rpm = 1500.0
 			gear_ratio_n = 30.0
+			projectiles_per_shot = 3
+			spread_cone_angle = 0.05
+			allowed_fire_modes = [FireMode.SEMI]
+			fire_mode = FireMode.SEMI
+			weapon_prefab = load("res://Scenes/shotgun.tscn")
 		WeaponModel.RIFLE:
+			first_person_offset = Vector3(0.22, -0.25, -0.42)
 			compatible_magazine_type = Magazine.Type.MAG_RIFLE_STANAG
 			simplified_energy_joules = 1.49
 			spring_k = 1192.0
 			spring_x = 0.05
 			motor_rpm = 24000.0
 			gear_ratio_n = 30.0
+			projectiles_per_shot = 1
+			spread_cone_angle = 0.0
+			allowed_fire_modes = [FireMode.SEMI, FireMode.AUTO]
+			spin_rad_s = 1300.0
+			weapon_prefab = load("res://Scenes/rifle.tscn")
 		WeaponModel.PISTOL_1911:
+			first_person_offset = Vector3(0.20, -0.2, -0.4)
 			compatible_magazine_type = Magazine.Type.MAG_PISTOL_1911
 			simplified_energy_joules = 0.9
 			spring_k = 720.0
 			spring_x = 0.05
 			motor_rpm = 10500.0
 			gear_ratio_n = 30.0
+			projectiles_per_shot = 1
+			spread_cone_angle = 0.0
+			allowed_fire_modes = [FireMode.SEMI]
+			fire_mode = FireMode.SEMI
+			weapon_prefab = load("res://Scenes/pistol1911.tscn")
 		WeaponModel.PISTOL_GLOCK:
+			first_person_offset = Vector3(0.20, -0.2, -0.45)
 			compatible_magazine_type = Magazine.Type.MAG_PISTOL_GLOCK
 			simplified_energy_joules = 1.0
 			spring_k = 800.0
 			spring_x = 0.05
 			motor_rpm = 12000.0
 			gear_ratio_n = 30.0
+			projectiles_per_shot = 1
+			spread_cone_angle = 0.0
+			allowed_fire_modes = [FireMode.SEMI, FireMode.AUTO]
+			weapon_prefab = load("res://Scenes/pistolGlock.tscn")
 	_update_cadence()
+
+
+func disparar() -> void:
+	fire()
 
 
 func fire() -> void:
@@ -478,7 +599,12 @@ func fire() -> void:
 		trigger_dry_fire()
 		return
 
-	var consumed: bool = equipped_magazine.consume_bbs(1)
+	var count_to_fire := mini(projectiles_per_shot, equipped_magazine.current_ammo)
+	if count_to_fire <= 0:
+		trigger_dry_fire()
+		return
+
+	var consumed: bool = equipped_magazine.consume_bbs(count_to_fire)
 	if not consumed:
 		trigger_dry_fire()
 		return
@@ -493,31 +619,71 @@ func fire() -> void:
 
 	print(bb_mass_kg, "kg | ", energy_joules, "J | ", round(velocity_fps), " FPS | Remaining: ", equipped_magazine.current_ammo)
 
-	var bullet = bb_scene.instantiate()
-	if is_inside_tree():
-		var tree := get_tree()
-		var spawn_parent: Node = tree.current_scene if (tree and tree.current_scene) else get_parent()
+	var muzzle_transform: Transform3D
+	if muzzle and muzzle.is_inside_tree():
+		muzzle_transform = muzzle.global_transform
+	elif is_inside_tree():
+		muzzle_transform = global_transform
+	elif muzzle:
+		muzzle_transform = muzzle.transform
+	else:
+		muzzle_transform = Transform3D.IDENTITY
+
+	var base_fire_dir: Vector3
+	if muzzle and muzzle.is_inside_tree():
+		base_fire_dir = -muzzle.global_transform.basis.z.normalized()
+	elif muzzle:
+		base_fire_dir = -muzzle.transform.basis.z.normalized()
+	elif is_inside_tree():
+		base_fire_dir = -global_transform.basis.z.normalized()
+	else:
+		base_fire_dir = Vector3.FORWARD
+
+	var spin_axis = base_fire_dir.cross(Vector3.UP).normalized()
+	if spin_axis.length_squared() < 0.001:
+		spin_axis = Vector3.RIGHT
+	var perp_axis = base_fire_dir.cross(spin_axis).normalized()
+
+	var tree := get_tree() if is_inside_tree() else null
+	var spawn_parent: Node = tree.current_scene if (tree and tree.current_scene) else get_parent()
+
+	for i in range(count_to_fire):
+		var bullet = bb_scene.instantiate()
 		if spawn_parent:
 			spawn_parent.add_child(bullet)
+		
+		bullet.global_transform = muzzle_transform
+		if "mass" in bullet:
+			bullet.mass = bb_mass_kg
+
+		var fire_direction := base_fire_dir
+		if (count_to_fire > 1 or spread_cone_angle > 0.0) and spread_cone_angle > 0.0:
+			var angle_x = randf_range(-spread_cone_angle, spread_cone_angle)
+			var angle_y = randf_range(-spread_cone_angle, spread_cone_angle)
+			fire_direction = (Basis(spin_axis, angle_y) * Basis(perp_axis, angle_x) * base_fire_dir).normalized()
+
+		if "linear_velocity" in bullet:
+			bullet.linear_velocity = fire_direction * velocity_ms
+		if "angular_velocity" in bullet:
+			bullet.angular_velocity = spin_axis * spin_rad_s
+
+	_play_fire_animation()
+
+
+func _play_fire_animation() -> void:
+	if mesh == null:
+		return
 	
-	var muzzle_transform = muzzle.global_transform if muzzle else (global_transform if is_inside_tree() else Transform3D.IDENTITY)
-	bullet.global_transform = muzzle_transform
-	if "mass" in bullet:
-		bullet.mass = bb_mass_kg
-
-	var fire_direction: Vector3
-	if muzzle:
-		fire_direction = -muzzle.global_transform.basis.x.normalized()
-	elif is_inside_tree():
-		fire_direction = -global_transform.basis.z.normalized()
-	else:
-		fire_direction = Vector3.FORWARD
-
-	if "linear_velocity" in bullet:
-		bullet.linear_velocity = fire_direction * velocity_ms
-	if "angular_velocity" in bullet:
-		var spin_axis = fire_direction.cross(Vector3.UP).normalized()
-		bullet.angular_velocity = spin_axis * spin_rad_s
+	var recoil_offset := Vector3(0, 0, 0.05)
+	var is_empty_now := (equipped_magazine != null and equipped_magazine.is_empty())
+	
+	var tween = create_tween()
+	if tween:
+		tween.tween_property(mesh, "position", _mesh_initial_position + recoil_offset, 0.03)
+		if is_empty_now and (weapon_model == WeaponModel.PISTOL_1911 or weapon_model == WeaponModel.PISTOL_GLOCK):
+			is_slide_locked_open = true
+		else:
+			tween.tween_property(mesh, "position", _mesh_initial_position, 0.05)
 
 
 func _emit_initial_state() -> void:
@@ -532,4 +698,3 @@ func _emit_initial_state() -> void:
 	hop_up_ajustado.emit(spin_rad_s)
 	cadencia_alterada.emit(rof, fire_interval)
 	mola_ajustada.emit(energy_joules)
-

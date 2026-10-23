@@ -1,0 +1,22 @@
+[gd_scene format=3 uid="uid://bocw8cq0ppeu5"]
+
+[ext_resource type="Script" path="res://Scripts/weapon_pickup.gd" id="1_wppickup"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_wppickup"]
+size = Vector3(1.8, 1.8, 1.8)
+
+[node name="WeaponPickup" type="Area3D"]
+script = ExtResource("1_wppickup")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("BoxShape3D_wppickup")
+
+[node name="ModelContainer" type="Node3D" parent="."]
+
+[node name="WeaponMesh" type="MeshInstance3D" parent="ModelContainer"]
+
+[node name="Label3D" type="Label3D" parent="ModelContainer"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.65, 0)
+billboard = 1
+font_size = 30
+outline_size = 8

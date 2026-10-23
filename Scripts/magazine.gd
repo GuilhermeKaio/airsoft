@@ -99,6 +99,10 @@ func consume_bbs(amount: int = 1) -> bool:
 	return false
 
 
+func consumir_bbs(amount: int = 1) -> bool:
+	return consume_bbs(amount)
+
+
 func add_bbs(amount: int) -> int:
 	if amount <= 0:
 		return 0

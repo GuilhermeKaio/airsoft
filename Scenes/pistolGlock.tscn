@@ -1,17 +1,17 @@
-[gd_scene format=3 uid="uid://d3j3pistolglock"]
+[gd_scene format=3 uid="uid://u65r5bv7unv7"]
 
-[ext_resource type="ArrayMesh" uid="uid://dpnfi7f4n3jh0" path="res://Asset/blaster-b.obj" id="1_k8sef"]
-[ext_resource type="Texture2D" uid="uid://gy7mi1s21osw" path="res://Asset/variation-a.png" id="2_vbn5g"]
+[ext_resource type="ArrayMesh" path="res://Assets/PistolGlock.obj" id="1_glock"]
+[ext_resource type="Texture2D" path="res://Assets/Textures/colormap.png" id="2_colormap"]
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_4jahr"]
-albedo_texture = ExtResource("2_vbn5g")
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_glock"]
+albedo_texture = ExtResource("2_colormap")
 
 [node name="pistolGlock" type="Node3D"]
 
 [node name="Mesh" type="MeshInstance3D" parent="."]
-transform = Transform3D(-2.1855695e-07, 0, 5, 0, 5, 0, -5, 0, -2.1855695e-07, -0.5470333, 0.9573078, 0)
-material_override = SubResource("StandardMaterial3D_4jahr")
-mesh = ExtResource("1_k8sef")
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+material_override = SubResource("StandardMaterial3D_glock")
+mesh = ExtResource("1_glock")
 
 [node name="Muzzle" type="Marker3D" parent="Mesh"]
-transform = Transform3D(-1.7484558e-08, -2.4847049e-22, -0.40000007, 1.4210855e-15, 0.4, 0, 0.40000007, 5.684342e-15, -1.7484558e-08, 1.0504982e-08, 0.021665856, -0.24032594)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.0216, -0.26)
