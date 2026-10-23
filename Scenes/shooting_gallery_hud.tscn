@@ -1,0 +1,145 @@
+[gd_scene format=3 uid="uid://b0g6galhudscn"]
+
+[ext_resource type="Script" uid="uid://cjlo2y14oae3e" path="res://Scripts/shooting_gallery_hud.gd" id="1_hud"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_summary"]
+bg_color = Color(0.08, 0.08, 0.12, 0.92)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.2, 0.6, 0.9, 0.8)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[node name="ShootingGalleryHUD" type="Control" unique_id=766197121]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_hud")
+
+[node name="ScoreContainer" type="VBoxContainer" parent="." unique_id=1144667650]
+layout_mode = 0
+offset_left = 24.0
+offset_top = 24.0
+offset_right = 320.0
+offset_bottom = 79.0
+
+[node name="ScoreLabel" type="Label" parent="ScoreContainer" unique_id=14231532]
+layout_mode = 2
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.8)
+theme_override_constants/shadow_offset_x = 2
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 28
+text = "PONTOS: 0"
+
+[node name="ComboLabel" type="Label" parent="ScoreContainer" unique_id=494518243]
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.85, 0.2, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.8)
+theme_override_constants/shadow_offset_x = 2
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 22
+text = "COMBO 2x (1.5x)"
+
+[node name="TimerContainer" type="HBoxContainer" parent="." unique_id=1143215991]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -150.0
+offset_top = 24.0
+offset_right = 150.0
+offset_bottom = 64.0
+grow_horizontal = 2
+alignment = 1
+
+[node name="TimerLabel" type="Label" parent="TimerContainer" unique_id=1467482733]
+layout_mode = 2
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.8)
+theme_override_constants/shadow_offset_x = 2
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 26
+text = "TEMPO: 60.0s"
+horizontal_alignment = 1
+
+[node name="StatsContainer" type="VBoxContainer" parent="." unique_id=964033649]
+layout_mode = 0
+offset_left = 24.0
+offset_top = 105.0
+offset_right = 450.0
+offset_bottom = 135.0
+
+[node name="StatsLabel" type="Label" parent="StatsContainer" unique_id=1322304734]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.85, 0.85, 0.85, 0.9)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.8)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 1
+theme_override_font_sizes/font_size = 11
+text = "ACERTOS: 0 | TIROS: 0 | PRECISÃO: 00.0%"
+
+[node name="NotificationLabel" type="Label" parent="." unique_id=1486122554]
+visible = false
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -300.0
+offset_top = 80.0
+offset_right = 300.0
+offset_bottom = 125.0
+grow_horizontal = 2
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.9)
+theme_override_constants/shadow_offset_x = 2
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 24
+text = "+100"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="SummaryPanel" type="PanelContainer" parent="." unique_id=69106557]
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -220.0
+offset_top = -140.0
+offset_right = 220.0
+offset_bottom = 140.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_summary")
+
+[node name="SummaryVBox" type="VBoxContainer" parent="SummaryPanel" unique_id=325477951]
+layout_mode = 2
+theme_override_constants/separation = 16
+alignment = 1
+
+[node name="SummaryContentLabel" type="Label" parent="SummaryPanel/SummaryVBox" unique_id=1820533142]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "FIM DA SESSÃO!
+
+Pontuação Final: 1200
+Precisão: 85.0%
+Inimigos Abatidos: 10
+Penalidades (Civis): 1"
+horizontal_alignment = 1
+
+[node name="RestartButton" type="Button" parent="SummaryPanel/SummaryVBox" unique_id=1738222293]
+custom_minimum_size = Vector2(160, 40)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 16
+text = "Reiniciar Sessão"
