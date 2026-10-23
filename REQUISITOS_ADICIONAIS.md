@@ -66,42 +66,67 @@ classDiagram
   - Alvos inimigos emitem cor verde / feedback visual positivo; alvos civis/amigos emitem cor vermelha / feedback de penalidade.
   - Desativação imediata de colisões subsequentes até a conclusão do ciclo de reset/respawn para evitar pontuação repetida pela mesma BB.
 
+### 1.4 Área Delimitada de Spawn dos Alvos (`TargetSpawnArea`)
+Para assegurar distribuição espacial uniforme, desafiadora e balanceada no estande de tiro, os alvos dinâmicos são instanciados dentro de um volume/zona 3D demarcada:
+- **Limites da Área de Spawn**:
+  - **Largura (Eixo Lateral X)**: Faixa de $-12.0\text{ m}$ a $+12.0\text{ m}$ em relação à linha central da galeria.
+  - **Profundidade (Eixo Longitudinal Z)**: Distâncias de $10.0\text{ m}$ até $45.0\text{ m}$ à frente da linha/bancada de disparo.
+  - **Altura (Eixo Vertical Y)**: Elevações de $0.5\text{ m}$ a $2.5\text{ m}$ acima do solo do estande.
+- **Validação de Anti-Sobreposição**:
+  - Todo novo alvo gerado dinamicamente deve respeitar uma distância mínima de separação (ex: raio mínimo de $2.0\text{ m}$) de qualquer outro alvo ativo, prevenindo sobreposição geométrica ou oclusão indevida.
+
 ---
 
-## 2. Sistema de Pontuação e Gerenciador da Galeria (`ShootingGalleryManager`)
+## 2. Sistema de Pontuação, Modos de Jogo e Painel de Controle (`ShootingGalleryManager`)
 
-O gerenciador orquestra a sessão do estande de tiro, controlando cronômetro, contagem de acertos, penalidades e envio de dados para o HUD.
+O gerenciador orquestra a sessão do estande de tiro, controlando o spawn na área delimitada, o painel interativo de opções, cronômetro, pontuação e envio de dados para o HUD.
 
-### 2.1 Regras de Pontuação e Multiplicadores
+### 2.1 Grande Painel de Controle no Estande (`ShootingGalleryControlPanel`)
+
+Próximo à bancada de tiro do jogador, deve existir um painel interativo de grande escala no cenário (3D World UI) contendo:
+
+1. **Seletor de Modo de Jogo (3 Modos)**:
+   - `Time Attack`
+   - `Free Practice`
+   - `Time Attack Hard`
+2. **Seletor de Velocidade de Desaparecimento (Janela de Sumir / Despawn Window)**:
+   - **Longa**: Janela de $\approx 2.5\text{ s}$ a $3.0\text{ s}$ antes do alvo desaparecer.
+   - **Média**: Janela de $\approx 1.5\text{ s}$ a $2.0\text{ s}$ antes do alvo desaparecer.
+   - **Curta**: Janela de $\approx 0.8\text{ s}$ a $1.0\text{ s}$ antes do alvo desaparecer.
+3. **Controles Interativos e Acionamento**:
+   - Botões físicos ou botões-alvo no painel que podem ser acionados tanto por **disparo direto de BB** quanto pela tecla de interação padrão (`E`).
+   - Exibição em tempo real do recorde (High Score), modo atualmente selecionado e tempo/janela de sumir ativa.
+
+### 2.2 Especificação dos 3 Modos de Jogo
+
+| Modo | Duração da Sessão | Regra de Spawn e Quantidade | Comportamento dos Alvos |
+| :--- | :--- | :--- | :--- |
+| **1. Time Attack** | Fixa (ex: 60s) | **1 alvo por vez** sequencial na área de spawn. | Um único alvo ativo por vez na área delimitada. Assim que for atingido (ou ao término do seu ciclo), um novo alvo é spawnado imediatamente em uma nova posição aleatória até o fim do tempo. |
+| **2. Free Practice** | Ilimitada (sem tempo limite) | Quantidade fixa **$X$ alvos simultâneos** (apenas `ENEMY`). | Mantém permanentemente $X$ alvos inimigos visíveis (ex: $X = 3$ a $5$). Ao abater qualquer um deles, outro alvo inimigo surge imediatamente na área de spawn para repor a quantidade exata. |
+| **3. Time Attack Hard** | Fixa (ex: 60s) | **Alvos temporizados com velocidade de sumir**. | Os alvos desaparecem caso não sejam abatidos dentro da janela de tempo selecionada no painel (**Longa**, **Média** ou **Curta**). Se o alvo sumir sem ser atingido, zera o multiplicador de combo e o próximo alvo surge imediatamente na área. |
+
+### 2.3 Regras de Pontuação e Multiplicadores
 
 | Evento | Pontuação Base | Efeito no Combo |
 | :--- | :--- | :--- |
 | **Acerto em Alvo Inimigo (`ENEMY`)** | `+100` pontos | Incrementa streak de acertos (+1 ao multiplicador de combo). |
 | **Acerto em Alvo Amigo (`FRIENDLY`)** | `-200` pontos | Reseta o multiplicador de combo para $1\times$ e aplica penalidade imediata. |
+| **Alvo Desaparecido (Time Attack Hard)** | `0` pontos | Reseta o multiplicador de combo para $1\times$ por falha de tempo. |
 | **Disparo no Vazio / Erro** | `0` pontos | Reduz gradualmente o tempo do combo. |
 
 * **Cálculo da Pontuação Final**:
   $$\text{Pontos Ganhos} = \text{Pontos Base} \cdot \text{Multiplicador de Combo}$$
   - O multiplicador de combo escala de $1.0\times$ até o teto configurável (ex: $4.0\times$) a cada série consecutiva de acertos inimigos.
 
-### 2.2 Modos de Sessão
-
-1. **Modo Contrarrelógio (`TIME_ATTACK`)**:
-   - Sessão com duração definida (ex: 60 segundos).
-   - Inicia com comando de ativação (botão ou disparo no gatilho de início).
-   - Ao término do tempo, bloqueia novos pontos e calcula estatísticas de precisão:
-     $$\text{Precisão (\%)} = \left(\frac{\text{Total de Acertos}}{\text{Total de Tiros Disparados}}\right) \cdot 100$$
-2. **Modo Prática Livre (`FREE_PRACTICE`)**:
-   - Sem limite de tempo; alvos resetam continuamente conforme são atingidos.
-   - Permite zerar pontuação a qualquer momento via sinal ou interface.
-
-### 2.3 Contratos de Sinais do Gerenciador
+### 2.4 Contratos de Sinais do Gerenciador
 ```gdscript
 signal alvo_atingido(alvo: Node, tipo_alvo: int, pontos: int, multiplicador: float)
+signal alvo_desapareceu(alvo: Node)
 signal pontuacao_alterada(pontuacao_atual: int, delta_pontos: int)
-signal sessao_iniciada(tempo_limite: float)
+signal sessao_iniciada(tempo_limite: float, modo: int)
 signal sessao_encerrada(pontuacao_final: int, precisao: float, acertos: int, penalidades: int)
 signal combo_alterado(combo_atual: int, multiplicador: float)
+signal configuracao_alterada(novo_modo: int, nova_velocidade_sumir: int)
 ```
 
 ---
