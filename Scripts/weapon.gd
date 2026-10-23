@@ -5,6 +5,8 @@ const Magazine = preload("res://Scripts/magazine.gd")
 const MagazineLoader = preload("res://Scripts/magazine_loader.gd")
 
 enum FireMode { SEMI, AUTO }
+enum SpringModel { PHYSICAL, SIMPLIFIED }
+enum WeaponModel { SHOTGUN, RIFLE, PISTOL_1911, PISTOL_GLOCK }
 
 signal ammo_changed(current: int, max_capacity: int)
 signal municao_alterada(current: int, max_capacity: int)
@@ -21,13 +23,39 @@ signal disparo_seco()
 signal incompatible_magazine()
 signal carregador_incompativel()
 signal magazine_equipped(magazine: Magazine)
+signal cadencia_alterada(novo_rof: float, novo_intervalo: float)
+signal mola_ajustada(nova_energia: float)
+
+@export_group("Weapon Identity & Models (SRS 3.2 & 4)")
+@export var weapon_model: WeaponModel = WeaponModel.PISTOL_GLOCK
 
 @export_group("Prefabs")
 @export var bb_scene: PackedScene
 @export var weapon_prefab: PackedScene
 
-@export_group("Ballistics & Physics")
-@export var energy_joules: float = 1.49
+@export_group("Spring & Energy System (SRS 3.2.1)")
+@export var spring_model: SpringModel = SpringModel.PHYSICAL
+@export var spring_k: float = 1192.0:
+	set(value):
+		spring_k = value
+		mola_ajustada.emit(energy_joules)
+@export var spring_x: float = 0.05:
+	set(value):
+		spring_x = value
+		mola_ajustada.emit(energy_joules)
+@export var nominal_energy_joules: float = 1.49:
+	set(value):
+		nominal_energy_joules = value
+		mola_ajustada.emit(energy_joules)
+
+var simplified_energy_joules: float:
+	get:
+		return nominal_energy_joules
+	set(value):
+		nominal_energy_joules = value
+		mola_ajustada.emit(energy_joules)
+
+@export_group("Ballistics & Hop-Up")
 @export var spin_rad_s: float = 1200.0
 @export var min_hop_up: float = 0.0
 @export var max_hop_up: float = 2500.0
@@ -35,14 +63,64 @@ signal magazine_equipped(magazine: Magazine)
 
 const METERS_TO_FEET: float = 3.28084
 
+@export_group("Motor, Gearbox & Cadence (SRS 3.2.2)")
+@export var motor_rpm: float = 8100.0:
+	set(value):
+		motor_rpm = value
+		_update_cadence()
+@export var gear_ratio_n: float = 30.0:
+	set(value):
+		gear_ratio_n = value
+		_update_cadence()
+@export var rof: float = 4.5
+@export var fire_interval: float = 0.22222222
+
 @export_group("Firing Mechanics")
 @export var fire_mode: FireMode = FireMode.SEMI
-@export var rpm: float = 700.0
 @export var reload_time: float = 2.0
 
 @export_group("Magazine System")
 @export var compatible_magazine_type: Magazine.Type = Magazine.Type.MAG_PISTOL_GLOCK
 @export var equipped_magazine: Magazine
+
+var energy_joules: float:
+	get:
+		return get_muzzle_energy()
+	set(value):
+		nominal_energy_joules = value
+		spring_model = SpringModel.SIMPLIFIED
+
+var spring_constant_k: float:
+	get:
+		return spring_k
+	set(value):
+		spring_k = value
+		spring_model = SpringModel.PHYSICAL
+
+var spring_compression_x: float:
+	get:
+		return spring_x
+	set(value):
+		spring_x = value
+		spring_model = SpringModel.PHYSICAL
+
+var rpm: float:
+	get:
+		return motor_rpm
+	set(value):
+		motor_rpm = value
+
+var gear_ratio: float:
+	get:
+		return gear_ratio_n
+	set(value):
+		gear_ratio_n = value
+
+var rotations_per_cycle: float:
+	get:
+		return gear_ratio_n
+	set(value):
+		gear_ratio_n = value
 
 var weapon_instance: Node3D
 var mesh: Node3D
@@ -71,9 +149,14 @@ var bb_mass_grams: float:
 		return equipped_magazine.get_bb_mass_grams() if equipped_magazine != null else 0.0
 
 
+func _init() -> void:
+	_update_cadence()
+
+
 func _ready() -> void:
 	# O input é delegado pelo Player conforme SRS Seções 2 e 3.1
 	set_process_unhandled_input(false)
+	_update_cadence()
 
 	if camera3:
 		_local_offset = camera3.global_transform.affine_inverse() * global_transform
@@ -116,7 +199,7 @@ func _process(delta: float) -> void:
 	if fire_mode == FireMode.AUTO and _trigger_held and _fire_cooldown <= 0.0:
 		if equipped_magazine != null and not equipped_magazine.is_empty():
 			fire()
-			_fire_cooldown = 60.0 / rpm
+			_fire_cooldown = get_fire_interval()
 		else:
 			trigger_dry_fire()
 			_start_reload()
@@ -129,22 +212,16 @@ func atirar(pressionado: bool) -> void:
 		return
 	if is_reloading:
 		return
-	if fire_mode == FireMode.SEMI:
-		if equipped_magazine != null and not equipped_magazine.is_empty():
-			if _fire_cooldown <= 0.0:
-				fire()
-				_fire_cooldown = 60.0 / rpm
-		else:
-			trigger_dry_fire()
-			_start_reload()
-	elif fire_mode == FireMode.AUTO:
-		if _fire_cooldown <= 0.0:
-			if equipped_magazine != null and not equipped_magazine.is_empty():
-				fire()
-				_fire_cooldown = 60.0 / rpm
-			else:
-				trigger_dry_fire()
-				_start_reload()
+	if _fire_cooldown > 0.0:
+		# Regra 2 (SRS 3.2.2): Bloqueio de Intervalo - acionamentos mais rápidos que intervalo são descartados
+		return
+
+	if equipped_magazine != null and not equipped_magazine.is_empty():
+		fire()
+		_fire_cooldown = get_fire_interval()
+	else:
+		trigger_dry_fire()
+		_start_reload()
 
 
 func alternar_modo_tiro() -> void:
@@ -267,6 +344,131 @@ func _finish_reload() -> void:
 	print("Reload complete!")
 
 
+## Modelo Físico da Mola e Velocidade (SRS Seção 3.2.1)
+func calculate_spring_energy(k: float = spring_k, x: float = spring_x) -> float:
+	return 0.5 * k * (x * x)
+
+
+func get_muzzle_energy() -> float:
+	if spring_model == SpringModel.PHYSICAL:
+		return calculate_spring_energy(spring_k, spring_x)
+	return nominal_energy_joules
+
+
+func calculate_velocity(bb_mass_kg: float, energy: float = NAN) -> float:
+	var e: float = get_muzzle_energy() if is_nan(energy) else energy
+	if bb_mass_kg <= 0.0 or e <= 0.0:
+		return 0.0
+	return sqrt((2.0 * e) / bb_mass_kg)
+
+
+func calculate_muzzle_velocity(bb_mass_kg: float, energy: float = NAN) -> float:
+	return calculate_velocity(bb_mass_kg, energy)
+
+
+func adjust_spring(k: float, x: float) -> void:
+	spring_k = k
+	spring_x = x
+	spring_model = SpringModel.PHYSICAL
+	mola_ajustada.emit(energy_joules)
+
+
+func set_spring(k: float, x: float) -> void:
+	adjust_spring(k, x)
+
+
+func set_simplified_energy(joules: float) -> void:
+	nominal_energy_joules = joules
+	spring_model = SpringModel.SIMPLIFIED
+	mola_ajustada.emit(energy_joules)
+
+
+## Motor, Gearbox e Cadência Real (SRS Seção 3.2.2)
+func _update_cadence() -> void:
+	if motor_rpm > 0.0 and gear_ratio_n > 0.0:
+		rof = motor_rpm / (60.0 * gear_ratio_n)
+		fire_interval = 1.0 / rof
+	else:
+		rof = 0.0
+		fire_interval = 0.0
+	cadencia_alterada.emit(rof, fire_interval)
+
+
+func get_rof() -> float:
+	if motor_rpm > 0.0 and gear_ratio_n > 0.0:
+		return motor_rpm / (60.0 * gear_ratio_n)
+	return 0.0
+
+
+func get_fire_interval() -> float:
+	var r := get_rof()
+	if r > 0.0:
+		return 1.0 / r
+	return 1.0
+
+
+func get_cadence_rpm() -> float:
+	return rof * 60.0
+
+
+func set_motor_and_gearbox(p_motor_rpm: float, p_gear_ratio_n: float) -> void:
+	motor_rpm = p_motor_rpm
+	gear_ratio_n = p_gear_ratio_n
+	_update_cadence()
+
+
+func print_cadence_debug() -> void:
+	print("Cadence Debug -> Motor RPM: %.1f | N: %.1f | ROF: %.2f BB/s | Intervalo: %.4fs" % [motor_rpm, gear_ratio_n, rof, fire_interval])
+
+
+func get_weapon_model_name() -> String:
+	match weapon_model:
+		WeaponModel.SHOTGUN:
+			return "Shotgun"
+		WeaponModel.RIFLE:
+			return "Rifle"
+		WeaponModel.PISTOL_1911:
+			return "Pistol1911"
+		WeaponModel.PISTOL_GLOCK:
+			return "PistolGlock"
+		_:
+			return "Unknown"
+
+
+func configure_weapon_preset(model: WeaponModel) -> void:
+	weapon_model = model
+	match model:
+		WeaponModel.SHOTGUN:
+			compatible_magazine_type = Magazine.Type.MAG_SHOTGUN_SHELL
+			simplified_energy_joules = 1.1
+			spring_k = 880.0
+			spring_x = 0.05
+			motor_rpm = 1500.0
+			gear_ratio_n = 30.0
+		WeaponModel.RIFLE:
+			compatible_magazine_type = Magazine.Type.MAG_RIFLE_STANAG
+			simplified_energy_joules = 1.49
+			spring_k = 1192.0
+			spring_x = 0.05
+			motor_rpm = 24000.0
+			gear_ratio_n = 30.0
+		WeaponModel.PISTOL_1911:
+			compatible_magazine_type = Magazine.Type.MAG_PISTOL_1911
+			simplified_energy_joules = 0.9
+			spring_k = 720.0
+			spring_x = 0.05
+			motor_rpm = 10500.0
+			gear_ratio_n = 30.0
+		WeaponModel.PISTOL_GLOCK:
+			compatible_magazine_type = Magazine.Type.MAG_PISTOL_GLOCK
+			simplified_energy_joules = 1.0
+			spring_k = 800.0
+			spring_x = 0.05
+			motor_rpm = 12000.0
+			gear_ratio_n = 30.0
+	_update_cadence()
+
+
 func fire() -> void:
 	if bb_scene == null:
 		push_error("BB scene is not configured!")
@@ -284,9 +486,9 @@ func fire() -> void:
 	ammo_changed.emit(equipped_magazine.current_ammo, equipped_magazine.capacity)
 	municao_alterada.emit(equipped_magazine.current_ammo, equipped_magazine.capacity)
 
-	# v = sqrt(2E / m) para cálculo de velocidade com a massa da BB equipada
+	# v = sqrt(2E / m) para cálculo de velocidade com a massa da BB equipada (SRS 3.2.1)
 	var bb_mass_kg: float = equipped_magazine.bb_mass_kg
-	var velocity_ms: float = sqrt((2.0 * energy_joules) / bb_mass_kg)
+	var velocity_ms: float = calculate_velocity(bb_mass_kg)
 	var velocity_fps: float = velocity_ms * METERS_TO_FEET
 
 	print(bb_mass_kg, "kg | ", energy_joules, "J | ", round(velocity_fps), " FPS | Remaining: ", equipped_magazine.current_ammo)
@@ -328,3 +530,6 @@ func _emit_initial_state() -> void:
 	modo_tiro_alterado.emit(mode_name)
 	hop_up_adjusted.emit(spin_rad_s)
 	hop_up_ajustado.emit(spin_rad_s)
+	cadencia_alterada.emit(rof, fire_interval)
+	mola_ajustada.emit(energy_joules)
+

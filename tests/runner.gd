@@ -122,6 +122,32 @@ func _initialize() -> void:
 			print("  [PASSED] %s" % m)
 			passed += 1
 
+	# 5. Spring Physical Model & Motor Cadence tests (SRS 3.2.1 & 3.2.2)
+	var sm_test = load("res://tests/test_spring_and_motor.gd").new()
+	var sm_methods = [
+		"test_spring_physical_model_formula",
+		"test_spring_simplified_model",
+		"test_bb_velocity_calculation_dynamic_mass",
+		"test_spring_energy_affects_bb_velocity",
+		"test_motor_cadence_formula_srs_calibration",
+		"test_cadence_rule_1_sensitivity",
+		"test_cadence_rule_2_interval_blocking_semi",
+		"test_cadence_rule_2_interval_blocking_auto",
+		"test_cadence_rule_3_verifiability_and_debugging",
+		"test_weapon_model_presets"
+	]
+
+	print("\n[Spring Model & Motor Cadence (SRS 3.2.1 & 3.2.2)]")
+	for m in sm_methods:
+		sm_test._reset()
+		sm_test.call(m)
+		if sm_test._failed:
+			print("  [FAILED] %s -> %s" % [m, sm_test._message])
+			failed += 1
+		else:
+			print("  [PASSED] %s" % m)
+			passed += 1
+
 	print("\n==================================================")
 	print("--- TOTAL: %d passed, %d failed ---" % [passed, failed])
 	print("==================================================")
