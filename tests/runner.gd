@@ -436,10 +436,6 @@ func _initialize() -> void:
 		else:
 			print("  [PASSED] %s" % m)
 			passed += 1
-			failed += 1
-		else:
-			print("  [PASSED] %s" % m)
-			passed += 1
 
 	print("\n==================================================")
 	print("--- TOTAL: %d passed, %d failed ---" % [passed, failed])
