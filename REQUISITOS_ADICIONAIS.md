@@ -243,3 +243,39 @@ A tela de pause deve conter uma seção de configurações de jogabilidade conte
 3. **Persistência das Configurações (`ConfigFile`)**:
    - As preferências devem ser salvas no arquivo `user://settings.cfg` na seção `[input]` com a chave `sensitivity = <valor>`.
    - Ao inicializar o jogo, a configuração é carregada automaticamente; caso o arquivo não exista, utiliza-se o valor padrão normativo (`default_sensitivity = 0.40`).
+
+
+---
+
+## 7. Taxa de Dispersão e Erro de Tiro por Movimentação (Padrão Valorant / Movement Inaccuracy)
+
+Para reproduzir a dinâmica tática de tiro do Valorant (onde o disparo em movimento sofre severa penalidade balística, incentivando a parada mecânica e o *counter-strafing*), a precisão e o cone de espalhamento dos projéteis passam a ser calculados dinamicamente com base no estado cinemático do jogador.
+
+### 7.1 Estados Cinemáticos e Ângulos de Dispersão (Movement Spread)
+
+A velocidade horizontal escalar atual do jogador ($v_h = \sqrt{v_x^2 + v_z^2}$) e o estado de contato com o solo determinam o ângulo do cone de erro balístico ($\theta_{\text{erro}}$):
+
+| Estado do Jogador | Velocidade Horizontal ($v_h$) | Ângulo de Erro / Dispersão ($\theta_{\text{erro}}$) | Impacto Balístico |
+| :--- | :--- | :--- | :--- |
+| **Parado / Estático (`Stationary`)** | $v_h \le 1.0\text{ m/s}$ | Base da arma ($\approx 0.05^\circ$ a $0.15^\circ$) | Precisão cirúrgica de primeiro tiro (*First-Bullet Accuracy*). |
+| **Andando (`Walking` / Shift)** | $1.0\text{ m/s} < v_h \le 3.0\text{ m/s}$ | Baixo / Moderado ($\approx 0.8^\circ$ a $1.5^\circ$) | Leve desvio; viável apenas a distâncias curtas. |
+| **Correndo (`Running`)** | $v_h > 3.0\text{ m/s}$ | Severo / Alto ($\approx 4.5^\circ$ a $7.0^\circ$) | Dispersão imprevisível em cone amplo (*Run & Gun* fortemente penalizado). |
+| **No Ar / Pulando (`Airborne / Jump`)** | `not is_on_floor()` | Máximo / Extremo ($\approx 8.0^\circ$ a $12.0^\circ$) | Inexatidão extrema; impossibilidade de tiros direcionados consistentes. |
+
+### 7.2 Transição e Counter-Strafing (*Deadzoning*)
+
+- **Zona Morta de Precisão (*Accuracy Deadzone*)**:
+  - Assim como no Valorant, quando o jogador desacelera e cruza o limiar de transição para baixo de $\approx 25\%$ a $30\%$ da velocidade máxima de corrida (limiar de *deadzoning*), a penalidade de movimento é neutralizada e a precisão do tiro é restaurada para a precisão base de tiro parado.
+- **Interpolação Suave de Transição**:
+  - A variação do erro balístico não ocorre com saltos bruscos, mas através de uma interpolação rápida (`lerp` / `move_toward`) proporcional à taxa de aceleração/frenagem do jogador.
+
+### 7.3 Aplicação Balística na BB e Retículo Dinâmico (Crosshair)
+
+1. **Deflexão Cônica na BB**:
+   - A cada disparo gerado em `fire()`, a direção inicial do vetor de velocidade da BB é defletida por um ângulo tridimensional estocástico derivado da soma vetorial:
+     $$\theta_{\text{total}} = \theta_{\text{arma\_base}} + \theta_{\text{recoil}} + \theta_{\text{movimento}}$$
+   - Em seguida, calcula-se a rotação aleatória uniforme dentro do círculo do cone de dispersão:
+     $$\vec{d}_{\text{final}} = \text{Rotacionar}(\vec{d}_{\text{muzzle}}, \text{eixo\_aleatorio}, \text{randf\_range}(0, \theta_{\text{total}}))$$
+2. **Reatividade do Retículo (Crosshair Movement Error)**:
+   - As linhas do retículo central no HUD ([`crosshair.gd`](file:///c:/Users/guilh/Documents/code/game/airsoft/Scripts/crosshair.gd)) devem se afastar radialmente proporcionalmente ao valor instantâneo de $\theta_{\text{movimento}}$.
+   - Proporciona feedback visual instantâneo ao jogador para saber exatamente quando atingiu estabilidade total para atirar.
