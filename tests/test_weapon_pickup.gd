@@ -123,7 +123,7 @@ func test_weapon_drop_preserves_state() -> void:
 	assert_eq(player.get_weapon().weapon_model, WeaponClass.WeaponModel.SHOTGUN)
 
 	# Find dropped pickup in root
-	var dropped_pickup: WeaponPickup = null
+	var dropped_pickup: Node = null
 	for child in root.get_children():
 		if child is WeaponPickupClass and child != shotgun_pickup:
 			dropped_pickup = child
