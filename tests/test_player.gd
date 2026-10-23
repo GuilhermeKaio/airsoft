@@ -36,6 +36,14 @@ func assert_eq(actual: Variant, expected: Variant, msg: String = "") -> void:
 		_failed = true
 		_message = msg if msg != "" else ("Expected %s, got %s" % [str(expected), str(actual)])
 
+func assert_almost_eq(actual: float, expected: float, tolerance: float = 0.001, msg: String = "") -> void:
+	_assertion_count += 1
+	if _failed:
+		return
+	if abs(actual - expected) > tolerance:
+		_failed = true
+		_message = msg if msg != "" else ("Expected ~%f, got %f (diff: %f > %f)" % [expected, actual, abs(actual - expected), tolerance])
+
 
 class MockWeapon extends Node:
 	var atirar_calls: Array = []
@@ -218,3 +226,48 @@ func test_player_and_real_weapon_integration() -> void:
 
 	weapon.free()
 	player.free()
+
+
+func test_player_sensitivity_and_disk_persistence() -> void:
+	# Ensure clean state for default sensitivity check
+	var dir = DirAccess.open("user://")
+	if dir and dir.file_exists("settings.cfg"):
+		dir.remove("settings.cfg")
+
+	var player = PlayerClass.new()
+	var cam = preload("res://Scripts/fps_camera_look.gd").new()
+	cam.name = "Camera3"
+	player.add_child(cam)
+	player._ready()
+	cam._ready()
+
+	assert_almost_eq(player.get_sensitivity(), 0.40, 0.001, "Default player sensitivity is 0.40")
+
+	# Setting player sensitivity updates camera and saves to disk
+	player.set_sensitivity(0.654, true)
+	assert_almost_eq(player.get_sensitivity(), 0.654, 0.001, "Player sensitivity updated to 0.654")
+	assert_almost_eq(cam.valorant_sensitivity, 0.654, 0.001, "Camera sensitivity synchronized to 0.654")
+
+	# Verify disk file
+	var config := ConfigFile.new()
+	var err := config.load("user://settings.cfg")
+	assert_eq(err, OK, "settings.cfg exists and loaded")
+	var saved_sens = config.get_value("input", "sensitivity", -1.0)
+	assert_almost_eq(float(saved_sens), 0.654, 0.001, "Saved sensitivity on disk matches 0.654")
+
+	# Verify new player instance auto-loads saved sensitivity from disk
+	var player2 = PlayerClass.new()
+	var cam2 = preload("res://Scripts/fps_camera_look.gd").new()
+	cam2.name = "Camera3"
+	player2.add_child(cam2)
+	player2._ready()
+	cam2._ready()
+
+	assert_almost_eq(player2.get_sensitivity(), 0.654, 0.001, "New player instance loads sensitivity 0.654 from disk")
+	assert_almost_eq(cam2.valorant_sensitivity, 0.654, 0.001, "New camera instance loads sensitivity 0.654 from disk")
+
+	# Reset back to default
+	player2.set_sensitivity(0.40, true)
+
+	player.free()
+	player2.free()

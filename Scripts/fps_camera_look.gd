@@ -72,6 +72,28 @@ func get_valorant_sensitivity() -> float:
 	return valorant_sensitivity
 
 
+func set_sensitivity(sens: float, save_to_disk: bool = false) -> void:
+	valorant_sensitivity = sens
+	if save_to_disk:
+		save_settings(sens)
+
+
+func get_sensitivity() -> float:
+	return valorant_sensitivity
+
+
+func save_settings(sens: float = -1.0) -> void:
+	var val_to_save := sens if sens >= 0.0 else valorant_sensitivity
+	var config := ConfigFile.new()
+	var _err = config.load(SETTINGS_PATH)
+	config.set_value("input", "sensitivity", val_to_save)
+	config.save(SETTINGS_PATH)
+
+
+func save_sensitivity_to_disk(sens: float = -1.0) -> void:
+	save_settings(sens)
+
+
 func _process(_delta: float) -> void:
 	if not is_inside_tree():
 		return

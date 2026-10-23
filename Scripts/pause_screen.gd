@@ -1,6 +1,8 @@
 extends CanvasLayer
 
 signal sensitivity_changed(new_sensitivity: float)
+signal bullet_trails_toggled(enabled: bool)
+signal trails_balas_alternado(habilitado: bool)
 signal game_paused
 signal game_resumed
 
@@ -14,10 +16,13 @@ const SENSITIVITY_STEP: float = 0.01
 @onready var sensitivity_slider: HSlider = find_child("SensitivitySlider", true, false)
 @onready var sensitivity_line_edit: LineEdit = find_child("SensitivityLineEdit", true, false)
 @onready var sensitivity_spinbox: SpinBox = find_child("SensitivitySpinBox", true, false)
+@onready var bullet_trails_checkbox: CheckBox = find_child("BulletTrailsCheckBox", true, false)
+@onready var trails_checkbox: CheckBox = find_child("BulletTrailsCheckBox", true, false)
 @onready var resume_button: Button = find_child("ResumeButton", true, false)
 @onready var restart_button: Button = find_child("RestartButton", true, false)
 
 var current_sensitivity: float = DEFAULT_SENSITIVITY
+var bullet_trails_enabled: bool = true
 var _prev_mouse_mode: Input.MouseMode = Input.MOUSE_MODE_CAPTURED
 var _updating_ui: bool = false
 
@@ -41,6 +46,13 @@ func _init_ui_references() -> void:
 		sensitivity_line_edit = find_child("SensitivityLineEdit", true, false)
 	if sensitivity_spinbox == null:
 		sensitivity_spinbox = find_child("SensitivitySpinBox", true, false)
+	if bullet_trails_checkbox == null:
+		bullet_trails_checkbox = find_child("BulletTrailsCheckBox", true, false)
+	if bullet_trails_checkbox == null:
+		bullet_trails_checkbox = find_child("TrailsCheckBox", true, false)
+	if bullet_trails_checkbox == null:
+		bullet_trails_checkbox = find_child("TrailCheckBox", true, false)
+	trails_checkbox = bullet_trails_checkbox
 	if resume_button == null:
 		resume_button = find_child("ResumeButton", true, false)
 	if restart_button == null:
@@ -60,6 +72,9 @@ func _connect_signals() -> void:
 	if sensitivity_spinbox and not sensitivity_spinbox.value_changed.is_connected(_on_spinbox_value_changed):
 		sensitivity_spinbox.value_changed.connect(_on_spinbox_value_changed)
 
+	if bullet_trails_checkbox and not bullet_trails_checkbox.toggled.is_connected(_on_trails_checkbox_toggled):
+		bullet_trails_checkbox.toggled.connect(_on_trails_checkbox_toggled)
+
 	if resume_button and not resume_button.pressed.is_connected(resume_game):
 		resume_button.pressed.connect(resume_game)
 
@@ -71,6 +86,9 @@ func _load_and_apply_settings() -> void:
 	current_sensitivity = load_sensitivity_setting()
 	_apply_sensitivity_to_ui(current_sensitivity)
 	apply_sensitivity_to_camera(current_sensitivity)
+
+	bullet_trails_enabled = load_bullet_trails_setting()
+	set_bullet_trails_enabled(bullet_trails_enabled, false)
 
 
 func _apply_sensitivity_to_ui(sens: float) -> void:
@@ -191,14 +209,91 @@ func apply_sensitivity_to_camera(sens: float) -> void:
 		for c in cameras:
 			if "valorant_sensitivity" in c:
 				c.valorant_sensitivity = sens
+		var players = get_tree().get_nodes_in_group("player")
+		for p in players:
+			if "valorant_sensitivity" in p:
+				p.valorant_sensitivity = sens
 
 
 func _apply_to_child_cameras(node: Node, sens: float) -> void:
-	if node != self and "valorant_sensitivity" in node:
-		node.valorant_sensitivity = sens
+	if node != self:
+		if "valorant_sensitivity" in node:
+			node.valorant_sensitivity = sens
 	for child in node.get_children():
 		if child != self:
 			_apply_to_child_cameras(child, sens)
+
+
+func set_bullet_trails_enabled(enabled: bool, save_to_file: bool = true) -> void:
+	bullet_trails_enabled = enabled
+	_updating_ui = true
+	if bullet_trails_checkbox:
+		bullet_trails_checkbox.button_pressed = enabled
+		bullet_trails_checkbox.text = "Ativado" if enabled else "Desativado"
+	_updating_ui = false
+
+	var BBClass = load("res://Scripts/bb.gd")
+	if BBClass and "set_global_trail_enabled" in BBClass:
+		BBClass.set_global_trail_enabled(enabled, get_tree() if is_inside_tree() else null)
+
+	_apply_trails_to_player(enabled)
+
+	if save_to_file:
+		save_bullet_trails_setting(enabled)
+
+	bullet_trails_toggled.emit(enabled)
+	trails_balas_alternado.emit(enabled)
+
+
+func is_bullet_trails_enabled() -> bool:
+	return bullet_trails_enabled
+
+
+func toggle_bullet_trails() -> bool:
+	set_bullet_trails_enabled(not bullet_trails_enabled, true)
+	return bullet_trails_enabled
+
+
+func _on_trails_checkbox_toggled(toggled_on: bool) -> void:
+	if _updating_ui:
+		return
+	set_bullet_trails_enabled(toggled_on, true)
+
+
+func _apply_trails_to_player(enabled: bool) -> void:
+	if not is_inside_tree():
+		var node = get_parent()
+		while node != null:
+			if node.has_method("set_bullet_tracing"):
+				node.set_bullet_tracing(enabled)
+			for child in node.get_children():
+				if child != self and child.has_method("set_bullet_tracing"):
+					child.set_bullet_tracing(enabled)
+			node = node.get_parent()
+		return
+
+	if get_tree():
+		var players = get_tree().get_nodes_in_group("player")
+		for p in players:
+			if p.has_method("set_bullet_tracing"):
+				p.set_bullet_tracing(enabled)
+
+
+func save_bullet_trails_setting(enabled: bool) -> void:
+	var config := ConfigFile.new()
+	var _err = config.load(SETTINGS_PATH)
+	config.set_value("gameplay", "bullet_trails", enabled)
+	config.save(SETTINGS_PATH)
+
+
+func load_bullet_trails_setting() -> bool:
+	var config := ConfigFile.new()
+	var err := config.load(SETTINGS_PATH)
+	if err == OK:
+		var val = config.get_value("gameplay", "bullet_trails", true)
+		if val is bool:
+			return val
+	return true
 
 
 func save_sensitivity_setting(sens: float) -> void:
@@ -238,6 +333,17 @@ func pause_game() -> void:
 		get_tree().paused = true
 	if pause_overlay:
 		pause_overlay.visible = true
+
+	var BBClass = load("res://Scripts/bb.gd")
+	if BBClass and "is_global_trail_enabled" in BBClass:
+		var current_state: bool = BBClass.is_global_trail_enabled()
+		bullet_trails_enabled = current_state
+		_updating_ui = true
+		if bullet_trails_checkbox:
+			bullet_trails_checkbox.button_pressed = current_state
+			bullet_trails_checkbox.text = "Ativado" if current_state else "Desativado"
+		_updating_ui = false
+
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	game_paused.emit()
 
