@@ -64,6 +64,9 @@ func test_pause_screen_ui_elements() -> void:
 	var line_edit = pause_instance.find_child("SensitivityLineEdit", true, false) as LineEdit
 	assert_true(line_edit != null, "SensitivityLineEdit (LineEdit) exists")
 
+	var trails_cb = pause_instance.find_child("BulletTrailsCheckBox", true, false) as CheckBox
+	assert_true(trails_cb != null, "BulletTrailsCheckBox (CheckBox) exists")
+
 	var resume_btn = pause_instance.find_child("ResumeButton", true, false) as Button
 	assert_true(resume_btn != null, "ResumeButton exists")
 
@@ -171,3 +174,88 @@ func test_pause_and_resume_flow() -> void:
 	assert_false(pause_instance.pause_overlay.visible, "Overlay hidden when resumed")
 
 	pause_instance.free()
+
+
+## 6. Bullet Trails Toggle via Pause Screen
+func test_pause_screen_bullet_trails_toggle() -> void:
+	var BBClass = preload("res://Scripts/bb.gd")
+	var PlayerClass = preload("res://Scripts/player.gd")
+	BBClass.set_global_trail_enabled(true)
+
+	var root = Node3D.new()
+	var player = PlayerClass.new()
+	player.name = "Player"
+	root.add_child(player)
+	player._ready()
+
+	var pause_instance = PauseScreenScene.instantiate()
+	root.add_child(pause_instance)
+	pause_instance._ready()
+
+	var signal_received := [false, true]
+	pause_instance.bullet_trails_toggled.connect(func(enabled: bool):
+		signal_received[0] = true
+		signal_received[1] = enabled
+	)
+
+	assert_true(pause_instance.is_bullet_trails_enabled(), "Trails enabled initially")
+	assert_true(pause_instance.bullet_trails_checkbox.button_pressed, "Checkbox initially pressed")
+
+	# Toggle off via pause screen method
+	pause_instance.set_bullet_trails_enabled(false)
+	assert_false(pause_instance.is_bullet_trails_enabled(), "Trails disabled after call")
+	assert_false(pause_instance.bullet_trails_checkbox.button_pressed, "Checkbox unpressed")
+	assert_false(BBClass.is_global_trail_enabled(), "BB global state updated to false")
+	assert_false(player.is_bullet_tracing_enabled(), "Player tracing updated to false")
+	assert_true(signal_received[0], "Signal emitted")
+	assert_false(signal_received[1], "Signal value is false")
+
+	# Toggle on via checkbox toggled event
+	signal_received[0] = false
+	pause_instance.bullet_trails_checkbox.button_pressed = true
+	pause_instance.bullet_trails_checkbox.toggled.emit(true)
+	assert_true(pause_instance.is_bullet_trails_enabled(), "Trails re-enabled via checkbox event")
+	assert_true(BBClass.is_global_trail_enabled(), "BB global state back to true")
+	assert_true(player.is_bullet_tracing_enabled(), "Player tracing back to true")
+	assert_true(signal_received[0], "Signal emitted")
+	assert_true(signal_received[1], "Signal value is true")
+
+	# In-game Ctrl+T sync when opening pause screen
+	player.toggle_bullet_tracing() # now false
+	assert_false(BBClass.is_global_trail_enabled())
+	pause_instance.pause_game()
+	assert_false(pause_instance.bullet_trails_checkbox.button_pressed, "Checkbox reflects in-game toggle when paused")
+	pause_instance.resume_game()
+
+	root.free()
+	BBClass.set_global_trail_enabled(true)
+
+
+## 7. Bullet Trails persistence in user://settings.cfg
+func test_bullet_trails_settings_persistence() -> void:
+	var BBClass = preload("res://Scripts/bb.gd")
+	BBClass.set_global_trail_enabled(true)
+
+	var pause_instance = PauseScreenScene.instantiate()
+	pause_instance._ready()
+
+	# Save disabled state
+	pause_instance.set_bullet_trails_enabled(false, true)
+
+	var config := ConfigFile.new()
+	var err := config.load("user://settings.cfg")
+	assert_eq(err, OK, "settings.cfg loaded")
+	var saved_val = config.get_value("gameplay", "bullet_trails", null)
+	assert_eq(saved_val, false, "settings.cfg contains bullet_trails = false")
+
+	# Load in new instance
+	var pause_instance_2 = PauseScreenScene.instantiate()
+	pause_instance_2._ready()
+	assert_false(pause_instance_2.is_bullet_trails_enabled(), "New pause instance auto-loads disabled trails")
+	assert_false(pause_instance_2.bullet_trails_checkbox.button_pressed, "Checkbox reflects loaded state")
+
+	# Restore to true
+	pause_instance_2.set_bullet_trails_enabled(true, true)
+	pause_instance.free()
+	pause_instance_2.free()
+	BBClass.set_global_trail_enabled(true)

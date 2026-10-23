@@ -65,7 +65,8 @@ func _initialize() -> void:
 		"test_delegation_recarregar",
 		"test_delegation_ajustar_hop_up",
 		"test_unhandled_input_delegation",
-		"test_player_and_real_weapon_integration"
+		"test_player_and_real_weapon_integration",
+		"test_player_sensitivity_and_disk_persistence"
 	]
 
 	print("\n[Player (Command Delegation)]")
@@ -325,7 +326,9 @@ func _initialize() -> void:
 		"test_two_way_slider_and_line_edit_sync",
 		"test_settings_persistence",
 		"test_immediate_runtime_application_to_camera",
-		"test_pause_and_resume_flow"
+		"test_pause_and_resume_flow",
+		"test_pause_screen_bullet_trails_toggle",
+		"test_bullet_trails_settings_persistence"
 	]
 
 	print("\n[Pause Screen & Double Sensitivity Control (SRS Seção 6.2)]")

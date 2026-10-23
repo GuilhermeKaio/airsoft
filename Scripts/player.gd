@@ -79,6 +79,22 @@ var _was_in_deadzone: bool = false
 var _override_on_floor: bool = false
 var _forced_on_floor_value: bool = true
 
+const DEFAULT_SENSITIVITY: float = 0.40
+const SETTINGS_PATH: String = "user://settings.cfg"
+
+@export_group("Input & Sensitivity (Valorant Scale - SRS Seção 6)")
+@export var valorant_sensitivity: float = DEFAULT_SENSITIVITY:
+	set(value):
+		valorant_sensitivity = value
+		if main_camera and "valorant_sensitivity" in main_camera:
+			main_camera.valorant_sensitivity = value
+
+var mouse_sensitivity: float:
+	get:
+		return valorant_sensitivity
+	set(value):
+		valorant_sensitivity = value
+
 @export_group("Inventory & Weapon Slots (SRS Seção 4 & 6)")
 @export var weapon: Node
 @export var weapon_slot_1: Node
@@ -93,6 +109,22 @@ func _ready() -> void:
 	if collision_layer == 1 and collision_mask == 1:
 		collision_layer = 2
 		collision_mask = 1
+
+	if main_camera == null:
+		main_camera = get_node_or_null("Camera3")
+
+	# Load sensitivity setting from disk and apply to player and camera
+	valorant_sensitivity = load_sensitivity_from_disk()
+	if main_camera and "valorant_sensitivity" in main_camera:
+		main_camera.valorant_sensitivity = valorant_sensitivity
+
+	# Load bullet trails preference if saved on disk
+	var config := ConfigFile.new()
+	if config.load(SETTINGS_PATH) == OK:
+		var trails_pref = config.get_value("gameplay", "bullet_trails", bullet_tracing_enabled)
+		if trails_pref is bool:
+			bullet_tracing_enabled = trails_pref
+			_apply_bullet_tracing(bullet_tracing_enabled)
 
 	if weapon_slot_1 == null:
 		weapon_slot_1 = get_node_or_null("WeaponSlot1")
@@ -287,6 +319,52 @@ func _apply_bullet_tracing(enabled: bool) -> void:
 	var active_w = get_weapon()
 	if active_w and active_w.has_method("set_bullet_tracing"):
 		active_w.set_bullet_tracing(enabled)
+
+
+func set_sensitivity(val: float, save_to_disk: bool = true) -> void:
+	valorant_sensitivity = val
+	if main_camera and "valorant_sensitivity" in main_camera:
+		main_camera.valorant_sensitivity = val
+	if save_to_disk:
+		save_sensitivity_to_disk(val)
+
+
+func get_sensitivity() -> float:
+	return valorant_sensitivity
+
+
+func set_valorant_sensitivity(val: float, save_to_disk: bool = true) -> void:
+	set_sensitivity(val, save_to_disk)
+
+
+func get_valorant_sensitivity() -> float:
+	return valorant_sensitivity
+
+
+func save_sensitivity_to_disk(sens: float = -1.0) -> void:
+	var val_to_save := sens if sens >= 0.0 else valorant_sensitivity
+	var config := ConfigFile.new()
+	var _err = config.load(SETTINGS_PATH)
+	config.set_value("input", "sensitivity", val_to_save)
+	config.save(SETTINGS_PATH)
+
+
+func save_sensitivity_setting(sens: float = -1.0) -> void:
+	save_sensitivity_to_disk(sens)
+
+
+func load_sensitivity_from_disk() -> float:
+	var config := ConfigFile.new()
+	var err := config.load(SETTINGS_PATH)
+	if err == OK:
+		var val = config.get_value("input", "sensitivity", DEFAULT_SENSITIVITY)
+		if val is float or val is int:
+			return float(val)
+	return DEFAULT_SENSITIVITY
+
+
+func load_sensitivity_setting() -> float:
+	return load_sensitivity_from_disk()
 
 
 func _unhandled_input(event: InputEvent) -> void:
